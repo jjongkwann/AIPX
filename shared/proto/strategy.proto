@@ -1,0 +1,166 @@
+syntax = "proto3";
+
+package strategy;
+
+option go_package = "github.com/jjongkwann/aipx/shared/proto/strategy";
+
+import "order.proto";
+
+// 전략 타입
+enum StrategyType {
+  MOMENTUM = 0;       // 모멘텀 전략
+  MEAN_REVERSION = 1; // 평균 회귀 전략
+  ARBITRAGE = 2;      // 차익거래
+  ML_BASED = 3;       // 머신러닝 기반
+  CUSTOM = 4;         // 사용자 정의
+}
+
+// 전략 상태
+enum StrategyStatus {
+  STOPPED = 0;        // 중지됨
+  RUNNING = 1;        // 실행 중
+  PAUSED = 2;         // 일시정지
+  ERROR = 3;          // 오류 상태
+}
+
+// 전략 설정
+message StrategyConfig {
+  string id = 1;                    // 전략 ID (UUID)
+  string name = 2;                  // 전략 이름
+  StrategyType type = 3;            // 전략 타입
+  string user_id = 4;               // 소유자 ID
+
+  repeated string symbols = 5;      // 대상 종목 리스트
+
+  // 리스크 관리 파라미터
+  double max_position_size = 6;     // 최대 포지션 크기 (금액)
+  double max_loss_per_trade = 7;    // 거래당 최대 손실 (%)
+  double max_daily_loss = 8;        // 일일 최대 손실 (%)
+
+  // 전략별 파라미터 (JSON)
+  string parameters = 9;            // 전략별 설정 JSON
+
+  int64 created_at = 10;
+  int64 updated_at = 11;
+}
+
+// 전략 메트릭
+message StrategyMetrics {
+  string strategy_id = 1;
+
+  // 수익 관련
+  double total_pnl = 2;             // 총 손익
+  double realized_pnl = 3;          // 실현 손익
+  double unrealized_pnl = 4;        // 미실현 손익
+
+  // 거래 통계
+  int64 total_trades = 5;           // 총 거래 수
+  int64 winning_trades = 6;         // 수익 거래 수
+  int64 losing_trades = 7;          // 손실 거래 수
+  double win_rate = 8;              // 승률 (%)
+
+  // 리스크 메트릭
+  double sharpe_ratio = 9;          // 샤프 지수
+  double max_drawdown = 10;         // 최대 낙폭 (%)
+
+  int64 last_updated = 11;          // 마지막 업데이트 시간
+}
+
+// 전략 시그널 (Kafka로 전송)
+message TradingSignal {
+  string strategy_id = 1;
+  string symbol = 2;
+  order.Side side = 3;              // BUY or SELL
+  double confidence = 4;            // 신호 신뢰도 (0.0 ~ 1.0)
+  double target_price = 5;          // 목표가
+  double stop_loss = 6;             // 손절가
+  string reason = 7;                // 시그널 발생 이유
+  int64 timestamp = 8;
+}
+
+// 전략 생성 요청
+message CreateStrategyRequest {
+  StrategyConfig config = 1;
+}
+
+// 전략 생성 응답
+message CreateStrategyResponse {
+  bool success = 1;
+  string strategy_id = 2;
+  string message = 3;
+}
+
+// 전략 시작 요청
+message StartStrategyRequest {
+  string strategy_id = 1;
+  string user_id = 2;
+}
+
+// 전략 시작 응답
+message StartStrategyResponse {
+  bool success = 1;
+  StrategyStatus status = 2;
+  string message = 3;
+}
+
+// 전략 중지 요청
+message StopStrategyRequest {
+  string strategy_id = 1;
+  string user_id = 2;
+}
+
+// 전략 중지 응답
+message StopStrategyResponse {
+  bool success = 1;
+  StrategyStatus status = 2;
+  string message = 3;
+}
+
+// 전략 조회 요청
+message GetStrategyRequest {
+  string strategy_id = 1;
+  string user_id = 2;
+}
+
+// 전략 리스트 조회 요청
+message ListStrategiesRequest {
+  string user_id = 1;
+  StrategyStatus status = 2;        // 필터링 (선택)
+  int32 page = 3;
+  int32 page_size = 4;
+}
+
+// 전략 리스트 응답
+message ListStrategiesResponse {
+  repeated StrategyConfig strategies = 1;
+  int32 total_count = 2;
+}
+
+// 전략 메트릭 조회 요청
+message GetMetricsRequest {
+  string strategy_id = 1;
+}
+
+// 전략 서비스
+service StrategyService {
+  // 전략 생성
+  rpc CreateStrategy(CreateStrategyRequest) returns (CreateStrategyResponse);
+
+  // 전략 시작
+  rpc StartStrategy(StartStrategyRequest) returns (StartStrategyResponse);
+
+  // 전략 중지
+  rpc StopStrategy(StopStrategyRequest) returns (StopStrategyResponse);
+
+  // 전략 조회
+  rpc GetStrategy(GetStrategyRequest) returns (StrategyConfig);
+
+  // 전략 리스트 조회
+  rpc ListStrategies(ListStrategiesRequest) returns (ListStrategiesResponse);
+
+  // 전략 메트릭 조회
+  rpc GetMetrics(GetMetricsRequest) returns (StrategyMetrics);
+
+  // 전략 메트릭 스트리밍 (실시간 업데이트)
+  rpc StreamMetrics(GetMetricsRequest) returns (stream StrategyMetrics);
+}

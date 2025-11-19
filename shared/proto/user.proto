@@ -1,0 +1,76 @@
+syntax = "proto3";
+
+package user;
+
+option go_package = "github.com/jjongkwann/aipx/shared/proto/user";
+
+// 사용자 정보
+message User {
+  string id = 1;              // UUID
+  string email = 2;
+  string username = 3;
+  int64 created_at = 4;       // Unix timestamp
+  bool is_active = 5;
+}
+
+// 사용자 인증 요청
+message AuthRequest {
+  string email = 1;
+  string password = 2;
+}
+
+// 사용자 인증 응답
+message AuthResponse {
+  bool success = 1;
+  string token = 2;           // JWT 토큰
+  User user = 3;
+  string message = 4;         // 실패 시 오류 메시지
+  int64 expires_at = 5;       // 토큰 만료 시간
+}
+
+// 사용자 등록 요청
+message RegisterRequest {
+  string email = 1;
+  string username = 2;
+  string password = 3;
+}
+
+// 사용자 등록 응답
+message RegisterResponse {
+  bool success = 1;
+  User user = 2;
+  string message = 3;         // 실패 시 오류 메시지
+}
+
+// 토큰 갱신 요청
+message RefreshTokenRequest {
+  string refresh_token = 1;
+}
+
+// 토큰 갱신 응답
+message RefreshTokenResponse {
+  bool success = 1;
+  string access_token = 2;
+  int64 expires_at = 3;
+  string message = 4;
+}
+
+// 사용자 서비스
+service UserService {
+  // 로그인
+  rpc Login(AuthRequest) returns (AuthResponse);
+
+  // 회원가입
+  rpc Register(RegisterRequest) returns (RegisterResponse);
+
+  // 토큰 갱신
+  rpc RefreshToken(RefreshTokenRequest) returns (RefreshTokenResponse);
+
+  // 사용자 정보 조회
+  rpc GetUser(GetUserRequest) returns (User);
+}
+
+// 사용자 조회 요청
+message GetUserRequest {
+  string user_id = 1;
+}

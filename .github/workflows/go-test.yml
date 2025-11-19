@@ -1,0 +1,67 @@
+name: Go Tests
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'shared/go/**'
+      - 'services/**/*.go'
+      - '.github/workflows/go-test.yml'
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'shared/go/**'
+      - 'services/**/*.go'
+
+jobs:
+  test:
+    name: Test Go Packages
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        go-version: ['1.21']
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: ${{ matrix.go-version }}
+          cache-dependency-path: shared/go/go.sum
+
+      - name: Install dependencies
+        working-directory: shared/go
+        run: go mod download
+
+      - name: Run tests
+        working-directory: shared/go
+        run: go test -v -race -coverprofile=coverage.txt -covermode=atomic ./...
+
+      - name: Upload coverage
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./shared/go/coverage.txt
+          flags: go
+          name: go-coverage
+
+  lint:
+    name: Lint Go Code
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.21'
+
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v3
+        with:
+          version: latest
+          working-directory: shared/go
