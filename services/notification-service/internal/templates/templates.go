@@ -8,7 +8,7 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/AIPX/shared/go/pkg/logger"
+	"github.com/jjongkwann/aipx/shared/go/pkg/logger"
 )
 
 //go:embed *.tmpl

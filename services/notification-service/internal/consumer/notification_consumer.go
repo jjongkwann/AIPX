@@ -9,8 +9,8 @@ import (
 	"github.com/AIPX/services/notification-service/internal/channels"
 	"github.com/AIPX/services/notification-service/internal/repository"
 	"github.com/AIPX/services/notification-service/internal/templates"
-	"github.com/AIPX/shared/go/pkg/kafka"
-	"github.com/AIPX/shared/go/pkg/logger"
+	"github.com/jjongkwann/aipx/shared/go/pkg/kafka"
+	"github.com/jjongkwann/aipx/shared/go/pkg/logger"
 )
 
 // Topics that notification service subscribes to
@@ -39,6 +39,7 @@ type NotificationConsumer struct {
 	repo          repository.NotificationRepository
 	templateEng   *templates.TemplateEngine
 	logger        *logger.Logger
+	topics        []string
 	processedMsgs int64
 	failedMsgs    int64
 }
@@ -63,6 +64,7 @@ func NewNotificationConsumer(config *NotificationConsumerConfig) (*NotificationC
 		repo:        config.Repository,
 		templateEng: config.TemplateEngine,
 		logger:      config.Logger,
+		topics:      config.KafkaConfig.Topics,
 	}
 
 	// Create Kafka consumer
@@ -82,7 +84,7 @@ func NewNotificationConsumer(config *NotificationConsumerConfig) (*NotificationC
 // Start starts consuming messages
 func (nc *NotificationConsumer) Start(ctx context.Context) error {
 	nc.logger.Info().
-		Strs("topics", nc.consumer.Topics()).
+		Strs("topics", nc.topics).
 		Msg("Starting notification consumer")
 
 	return nc.consumer.Start(ctx)
@@ -100,7 +102,7 @@ func (nc *NotificationConsumer) Close() error {
 
 // Topics returns the list of subscribed topics
 func (nc *NotificationConsumer) Topics() []string {
-	return []string{TopicTradeOrders, TopicRiskAlerts, TopicSystemAlerts}
+	return nc.topics
 }
 
 // handleMessage processes a consumed Kafka message

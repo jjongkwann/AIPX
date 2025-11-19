@@ -2,7 +2,9 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
@@ -13,8 +15,8 @@ import (
 	"github.com/AIPX/services/notification-service/internal/consumer"
 	"github.com/AIPX/services/notification-service/internal/repository"
 	"github.com/AIPX/services/notification-service/internal/templates"
-	"github.com/AIPX/shared/go/pkg/kafka"
-	"github.com/AIPX/shared/go/pkg/logger"
+	"github.com/jjongkwann/aipx/shared/go/pkg/kafka"
+	"github.com/jjongkwann/aipx/shared/go/pkg/logger"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -77,7 +79,38 @@ func main() {
 		Int("count", len(notifChannels)).
 		Msg("Notification channels initialized")
 
+	// Initialize Channel Manager
+	channelManager := channels.NewChannelManager(&channels.ChannelManagerConfig{
+		Channels: notifChannels,
+		Logger:   log,
+	})
+
+	log.Info().
+		Strs("channels", channelManager.ListChannels()).
+		Msg("Channel manager initialized")
+
+	// Perform initial health check
+	healthResults := channelManager.HealthCheck(context.Background())
+	for channelName, err := range healthResults {
+		if err != nil {
+			log.Warn().
+				Err(err).
+				Str("channel", channelName).
+				Msg("Channel health check failed")
+		} else {
+			log.Info().
+				Str("channel", channelName).
+				Msg("Channel health check passed")
+		}
+	}
+
 	// Initialize Kafka consumer
+	// Convert initial offset from string to int64
+	initialOffset := int64(-1) // newest by default
+	if cfg.Kafka.InitialOffset == "oldest" {
+		initialOffset = int64(-2)
+	}
+
 	kafkaConfig := &kafka.ConsumerConfig{
 		Brokers:            cfg.Kafka.Brokers,
 		GroupID:            cfg.Kafka.GroupID,
@@ -86,7 +119,7 @@ func main() {
 		AutoCommitInterval: cfg.Kafka.AutoCommitInterval,
 		SessionTimeout:     cfg.Kafka.SessionTimeout,
 		HeartbeatInterval:  cfg.Kafka.HeartbeatInterval,
-		InitialOffset:      cfg.Kafka.InitialOffset,
+		InitialOffset:      initialOffset,
 	}
 
 	notificationConsumer, err := consumer.NewNotificationConsumer(&consumer.NotificationConsumerConfig{
@@ -103,6 +136,16 @@ func main() {
 	log.Info().
 		Strs("topics", notificationConsumer.Topics()).
 		Msg("Notification consumer initialized")
+
+	// Start HTTP server for health checks and metrics
+	httpServer := startHTTPServer(cfg, log, channelManager, notificationConsumer)
+	defer func() {
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		if err := httpServer.Shutdown(shutdownCtx); err != nil {
+			log.Error().Err(err).Msg("HTTP server shutdown error")
+		}
+	}()
 
 	// Create context for graceful shutdown
 	ctx, cancel := context.WithCancel(context.Background())
@@ -265,6 +308,126 @@ func initChannels(cfg *config.Config, log *logger.Logger) (map[string]channels.N
 	}
 
 	return notifChannels, nil
+}
+
+// startHTTPServer starts the HTTP server for health checks and metrics
+func startHTTPServer(cfg *config.Config, log *logger.Logger, manager *channels.ChannelManager, consumer *consumer.NotificationConsumer) *http.Server {
+	mux := http.NewServeMux()
+
+	// Health check endpoint
+	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
+
+		ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+		defer cancel()
+
+		healthResults := manager.HealthCheck(ctx)
+		allHealthy := true
+		for _, err := range healthResults {
+			if err != nil {
+				allHealthy = false
+				break
+			}
+		}
+
+		status := "healthy"
+		statusCode := http.StatusOK
+		if !allHealthy {
+			status = "degraded"
+			statusCode = http.StatusServiceUnavailable
+		}
+
+		response := map[string]interface{}{
+			"status":   status,
+			"version":  getVersion(),
+			"channels": healthResults,
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(statusCode)
+		json.NewEncoder(w).Encode(response)
+	})
+
+	// Readiness check endpoint
+	mux.HandleFunc("/ready", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
+
+		response := map[string]interface{}{
+			"status":   "ready",
+			"channels": len(manager.ListChannels()),
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(response)
+	})
+
+	// Metrics endpoint
+	mux.HandleFunc("/metrics", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
+
+		channelMetrics := manager.GetMetrics()
+		consumerMetrics := consumer.GetMetrics()
+
+		response := map[string]interface{}{
+			"channels": channelMetrics,
+			"consumer": consumerMetrics,
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(response)
+	})
+
+	// Info endpoint
+	mux.HandleFunc("/info", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
+
+		response := map[string]interface{}{
+			"service":     "notification-service",
+			"version":     getVersion(),
+			"environment": cfg.Environment,
+			"channels":    manager.ListChannels(),
+			"topics":      consumer.Topics(),
+			"routing":     manager.GetRoutingRules(),
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(response)
+	})
+
+	server := &http.Server{
+		Addr:         ":" + cfg.Server.HTTPPort,
+		Handler:      mux,
+		ReadTimeout:  10 * time.Second,
+		WriteTimeout: 10 * time.Second,
+		IdleTimeout:  60 * time.Second,
+	}
+
+	go func() {
+		log.Info().
+			Str("port", cfg.Server.HTTPPort).
+			Msg("HTTP server started")
+
+		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Error().Err(err).Msg("HTTP server error")
+		}
+	}()
+
+	return server
 }
 
 // getVersion returns the service version

@@ -1,0 +1,9 @@
+System Alert
+---
+{{.message}}
+
+{{if .component}}Component: {{.component}}{{end}}
+{{if .status}}Status: {{upper .status}}{{end}}
+{{if .impact}}Impact: {{.impact}}{{end}}
+
+Time: {{.timestamp}}
