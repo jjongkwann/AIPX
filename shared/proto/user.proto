@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package user;
 
-option go_package = "github.com/jjongkwann/aipx/shared/proto/user";
+option go_package = "github.com/jjongkwann/aipx/shared/go/pkg/pb";
 
 // 사용자 정보
 message User {

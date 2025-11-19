@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package market_data;
 
-option go_package = "github.com/jjongkwann/aipx/shared/proto/market_data";
+option go_package = "github.com/jjongkwann/aipx/shared/go/pkg/pb";
 
 // 틱 데이터 (체결)
 message TickData {

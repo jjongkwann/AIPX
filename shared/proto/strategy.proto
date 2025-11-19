@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package strategy;
 
-option go_package = "github.com/jjongkwann/aipx/shared/proto/strategy";
+option go_package = "github.com/jjongkwann/aipx/shared/go/pkg/pb";
 
 import "order.proto";
 
