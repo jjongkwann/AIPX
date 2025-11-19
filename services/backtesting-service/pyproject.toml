@@ -1,0 +1,11 @@
+[project]
+name = "backtesting-service"
+version = "0.1.0"
+description = "Event-driven Backtesting Service for AIPX"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = ["pandas", "numpy"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

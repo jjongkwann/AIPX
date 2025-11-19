@@ -1,0 +1,29 @@
+syntax = "proto3";
+
+package market_data;
+
+option go_package = "github.com/jjongkwann/aipx/shared/proto/market_data";
+
+// 틱 데이터 (체결)
+message TickData {
+  string symbol = 1;      // 종목 코드 (예: 005930)
+  double price = 2;       // 현재가
+  int64 volume = 3;       // 체결량
+  int64 timestamp = 4;    // 체결 시간 (Unix nanoseconds)
+  double change = 5;      // 전일 대비 등락
+  double change_rate = 6; // 등락률
+}
+
+// 호가 데이터 (OrderBook)
+message OrderBook {
+  string symbol = 1;
+  repeated Level bids = 2; // 매수 호가
+  repeated Level asks = 3; // 매도 호가
+  int64 timestamp = 4;
+}
+
+// 호가 레벨
+message Level {
+  double price = 1;
+  int64 quantity = 2;
+}

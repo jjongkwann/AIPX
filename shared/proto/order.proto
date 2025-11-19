@@ -1,0 +1,53 @@
+syntax = "proto3";
+
+package order;
+
+option go_package = "github.com/jjongkwann/aipx/shared/proto/order";
+
+enum Side {
+  BUY = 0;
+  SELL = 1;
+}
+
+enum OrderType {
+  LIMIT = 0;  // 지정가
+  MARKET = 1; // 시장가
+}
+
+enum OrderStatus {
+  PENDING = 0;
+  ACCEPTED = 1;
+  REJECTED = 2;
+  PARTIALLY_FILLED = 3;
+  FILLED = 4;
+  CANCELLED = 5;
+}
+
+// 주문 요청 (Strategy -> OMS)
+message OrderRequest {
+  string id = 1;          // UUID
+  string symbol = 2;
+  Side side = 3;
+  OrderType type = 4;
+  double price = 5;       // 지정가일 경우 필수
+  int64 quantity = 6;
+  string strategy_id = 7; // 주문을 생성한 전략 ID
+  int64 timestamp = 8;
+}
+
+// 주문 응답 (OMS -> Strategy)
+message OrderResponse {
+  string order_id = 1;
+  string request_id = 2;
+  OrderStatus status = 3;
+  double filled_price = 4;    // 평균 체결가
+  int64 filled_quantity = 5;  // 체결 수량
+  string message = 6;         // 거부 사유 등
+  int64 timestamp = 7;
+}
+
+// 주문 서비스 (gRPC)
+service OrderService {
+  // 양방향 스트리밍: 주문을 보내고 체결 업데이트를 실시간으로 수신
+  rpc StreamOrders(stream OrderRequest) returns (stream OrderResponse);
+}
