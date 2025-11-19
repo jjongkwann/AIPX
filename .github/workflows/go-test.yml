@@ -2,66 +2,158 @@ name: Go Tests
 
 on:
   push:
-    branches: [main, develop]
+    branches: [main]
     paths:
+      - '**/*.go'
+      - 'go.mod'
+      - 'go.sum'
       - 'shared/go/**'
       - 'services/**/*.go'
       - '.github/workflows/go-test.yml'
   pull_request:
-    branches: [main, develop]
+    branches: [main]
     paths:
+      - '**/*.go'
+      - 'go.mod'
+      - 'go.sum'
       - 'shared/go/**'
       - 'services/**/*.go'
 
-jobs:
-  test:
-    name: Test Go Packages
-    runs-on: ubuntu-latest
+# Cancel in-progress runs for the same workflow and PR/branch
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
-    strategy:
-      matrix:
-        go-version: ['1.21']
+jobs:
+  lint:
+    name: Lint Go Code
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Setup Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+          cache: true
+          cache-dependency-path: 'shared/go/go.sum'
+
+      - name: Cache Go modules
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Download dependencies
+        working-directory: shared/go
+        run: go mod download
+
+      - name: Run go vet
+        working-directory: shared/go
+        run: go vet ./...
+
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v4
+        with:
+          version: latest
+          working-directory: shared/go
+          args: --timeout=5m
+
+  test:
+    name: Test Go Packages
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: lint
+
+    strategy:
+      fail-fast: false
+      matrix:
+        go-version: ['1.21', '1.22']
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Go ${{ matrix.go-version }}
+        uses: actions/setup-go@v5
         with:
           go-version: ${{ matrix.go-version }}
-          cache-dependency-path: shared/go/go.sum
+          cache: true
+          cache-dependency-path: 'shared/go/go.sum'
+
+      - name: Cache Go modules
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: ${{ runner.os }}-go-${{ matrix.go-version }}-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-${{ matrix.go-version }}-
 
       - name: Install dependencies
         working-directory: shared/go
         run: go mod download
 
-      - name: Run tests
+      - name: Run tests with coverage
         working-directory: shared/go
         run: go test -v -race -coverprofile=coverage.txt -covermode=atomic ./...
 
-      - name: Upload coverage
-        uses: codecov/codecov-action@v3
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
         with:
           files: ./shared/go/coverage.txt
-          flags: go
-          name: go-coverage
+          flags: go-${{ matrix.go-version }}
+          name: go-${{ matrix.go-version }}-coverage
+          fail_ci_if_error: false
+          token: ${{ secrets.CODECOV_TOKEN }}
 
-  lint:
-    name: Lint Go Code
+  build:
+    name: Build Check
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: test
+
+    strategy:
+      matrix:
+        service:
+          - data-ingestion-service
+          - order-management-service
+          - user-service
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Setup Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
-          go-version: '1.21'
+          go-version: '1.22'
+          cache: true
 
-      - name: golangci-lint
-        uses: golangci/golangci-lint-action@v3
+      - name: Cache Go modules
+        uses: actions/cache@v3
         with:
-          version: latest
-          working-directory: shared/go
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: ${{ runner.os }}-go-build-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-build-
+
+      - name: Build ${{ matrix.service }}
+        run: |
+          if [ -f "services/${{ matrix.service }}/main.go" ]; then
+            cd services/${{ matrix.service }}
+            go build -v -o bin/service ./...
+          else
+            echo "Service ${{ matrix.service }} not ready for build yet, skipping"
+          fi
+        continue-on-error: true

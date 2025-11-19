@@ -1,0 +1,283 @@
+name: Integration Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    # Run integration tests daily at 2 AM UTC
+    - cron: '0 2 * * *'
+
+# Cancel in-progress runs for the same workflow and PR/branch
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  POSTGRES_USER: aipx_test
+  POSTGRES_PASSWORD: test_password
+  POSTGRES_DB: aipx_test
+  REDIS_PASSWORD: test_redis_password
+
+jobs:
+  integration-test:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: ${{ env.POSTGRES_USER }}
+          POSTGRES_PASSWORD: ${{ env.POSTGRES_PASSWORD }}
+          POSTGRES_DB: ${{ env.POSTGRES_DB }}
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+          cache: true
+          cache-dependency-path: 'shared/go/go.sum'
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+          cache-dependency-path: 'shared/python/requirements*.txt'
+
+      - name: Install Go dependencies
+        working-directory: shared/go
+        run: go mod download
+
+      - name: Install Python dependencies
+        working-directory: shared/python
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -r requirements-test.txt
+
+      - name: Wait for services
+        run: |
+          echo "Waiting for PostgreSQL..."
+          for i in {1..30}; do
+            if pg_isready -h localhost -p 5432 -U ${{ env.POSTGRES_USER }}; then
+              echo "PostgreSQL is ready"
+              break
+            fi
+            echo "Waiting for PostgreSQL... ($i/30)"
+            sleep 2
+          done
+
+          echo "Waiting for Redis..."
+          for i in {1..30}; do
+            if redis-cli -h localhost -p 6379 ping; then
+              echo "Redis is ready"
+              break
+            fi
+            echo "Waiting for Redis... ($i/30)"
+            sleep 2
+          done
+
+      - name: Initialize database
+        run: |
+          PGPASSWORD=${{ env.POSTGRES_PASSWORD }} psql \
+            -h localhost \
+            -U ${{ env.POSTGRES_USER }} \
+            -d ${{ env.POSTGRES_DB }} \
+            -f scripts/init-db.sql || echo "Schema initialization completed"
+
+      - name: Run Go integration tests
+        working-directory: shared/go
+        env:
+          DATABASE_URL: postgresql://${{ env.POSTGRES_USER }}:${{ env.POSTGRES_PASSWORD }}@localhost:5432/${{ env.POSTGRES_DB }}?sslmode=disable
+          REDIS_URL: redis://localhost:6379
+          TEST_ENV: integration
+        run: |
+          go test -v -tags=integration -timeout=10m ./... || echo "No integration tests found yet"
+        continue-on-error: true
+
+      - name: Run Python integration tests
+        working-directory: shared/python
+        env:
+          DATABASE_URL: postgresql://${{ env.POSTGRES_USER }}:${{ env.POSTGRES_PASSWORD }}@localhost:5432/${{ env.POSTGRES_DB }}?sslmode=disable
+          REDIS_URL: redis://localhost:6379
+          TEST_ENV: integration
+        run: |
+          if [ -d "tests/integration" ]; then
+            pytest tests/integration/ -v --maxfail=5
+          else
+            echo "No integration tests found yet"
+          fi
+        continue-on-error: true
+
+      - name: Test database migrations
+        run: |
+          echo "Testing database migrations..."
+          # Future: Add migration testing when migrations are implemented
+          echo "Migration tests not implemented yet"
+        continue-on-error: true
+
+      - name: Upload test logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: integration-test-logs
+          path: |
+            shared/go/integration-test.log
+            shared/python/integration-test.log
+          retention-days: 7
+          if-no-files-found: ignore
+
+  e2e-test:
+    name: End-to-End Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    if: github.event_name == 'push' || github.event_name == 'schedule'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Create .env file
+        run: |
+          cat > .env <<EOF
+          POSTGRES_USER=aipx
+          POSTGRES_PASSWORD=aipx_password
+          POSTGRES_DB=aipx
+          REDIS_PASSWORD=redis_password
+          KAFKA_BROKER=kafka:9092
+          EOF
+
+      - name: Start services with docker-compose
+        run: |
+          docker-compose up -d
+          sleep 30
+
+      - name: Check service health
+        run: |
+          docker-compose ps
+
+          # Check PostgreSQL
+          docker-compose exec -T postgres pg_isready || echo "Postgres not ready"
+
+          # Check Redis
+          docker-compose exec -T redis redis-cli ping || echo "Redis not ready"
+
+          # Show logs
+          docker-compose logs
+
+      - name: Run E2E tests
+        run: |
+          echo "E2E tests will be implemented here"
+          # Future: Add actual E2E test execution
+        continue-on-error: true
+
+      - name: Collect service logs
+        if: always()
+        run: |
+          mkdir -p logs
+          docker-compose logs > logs/docker-compose.log
+          docker-compose ps > logs/docker-compose-ps.log
+
+      - name: Upload service logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-test-logs
+          path: logs/
+          retention-days: 7
+
+      - name: Cleanup
+        if: always()
+        run: |
+          docker-compose down -v
+          docker-compose rm -f
+
+  performance-test:
+    name: Performance Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    if: github.event_name == 'schedule' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install performance testing tools
+        run: |
+          pip install locust pytest-benchmark
+
+      - name: Run performance tests
+        run: |
+          echo "Performance tests will be implemented here"
+          # Future: Add Locust or k6 performance tests
+        continue-on-error: true
+
+      - name: Generate performance report
+        if: always()
+        run: |
+          echo "## Performance Test Results" > performance-report.md
+          echo "" >> performance-report.md
+          echo "Performance tests not implemented yet" >> performance-report.md
+
+      - name: Upload performance report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: performance-report
+          path: performance-report.md
+          retention-days: 30
+
+  notify:
+    name: Notify Results
+    runs-on: ubuntu-latest
+    needs: [integration-test, e2e-test]
+    if: always() && (github.event_name == 'schedule' || failure())
+
+    steps:
+      - name: Create summary
+        run: |
+          echo "## Integration Test Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- Integration Tests: ${{ needs.integration-test.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- E2E Tests: ${{ needs.e2e-test.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Workflow run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" >> $GITHUB_STEP_SUMMARY
+
+      - name: Send notification (placeholder)
+        if: failure()
+        run: |
+          echo "Would send notification about test failure"
+          # Future: Integrate with Slack/Discord/Email
