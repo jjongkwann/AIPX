@@ -2,18 +2,24 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
-	"github.com/gin-gonic/gin"
+	"github.com/go-chi/chi/v5"
+	chimiddleware "github.com/go-chi/chi/v5/middleware"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/rs/zerolog/log"
 
+	"user-service/internal/auth"
 	"user-service/internal/config"
+	"user-service/internal/handlers"
+	"user-service/internal/middleware"
+	"user-service/internal/models"
 	"user-service/internal/repository"
 )
 
@@ -21,27 +27,55 @@ func main() {
 	// Load configuration
 	cfg, err := config.LoadConfig()
 	if err != nil {
-		log.Fatalf("Failed to load configuration: %v", err)
+		log.Fatal().Err(err).Msg("Failed to load configuration")
 	}
 
-	// Set Gin mode based on environment
-	if cfg.Server.IsProduction() {
-		gin.SetMode(gin.ReleaseMode)
+	// Initialize logger
+	if err := initLogger(cfg); err != nil {
+		log.Fatal().Err(err).Msg("Failed to initialize logger")
 	}
+
+	log.Info().
+		Str("environment", cfg.Server.Environment).
+		Int("port", cfg.Server.Port).
+		Msg("Starting User Service")
 
 	// Initialize database connection pool
 	dbPool, err := initDatabase(cfg.Database)
 	if err != nil {
-		log.Fatalf("Failed to initialize database: %v", err)
+		log.Fatal().Err(err).Msg("Failed to initialize database")
 	}
 	defer dbPool.Close()
 
 	// Initialize repositories
 	repos := initRepositories(dbPool)
-	_ = repos // Will be used when implementing handlers
+
+	// Initialize password hasher
+	passwordHasher := auth.NewArgon2Hasher(auth.DefaultArgon2Params())
+
+	// Initialize JWT manager
+	jwtManager, err := auth.NewJWTManager(
+		cfg.JWT.AccessSecret,
+		cfg.JWT.RefreshSecret,
+		cfg.JWT.AccessTTL,
+		cfg.JWT.RefreshTTL,
+		cfg.JWT.Issuer,
+	)
+	if err != nil {
+		log.Fatal().Err(err).Msg("Failed to initialize JWT manager")
+	}
+
+	// Initialize handlers
+	authHandler := handlers.NewAuthHandler(
+		repos.User,
+		repos.RefreshToken,
+		passwordHasher,
+		jwtManager,
+	)
+	userHandler := handlers.NewUserHandler(repos.User)
 
 	// Initialize HTTP router
-	router := setupRouter(cfg)
+	router := setupRouter(cfg, jwtManager, authHandler, userHandler)
 
 	// Create HTTP server
 	server := &http.Server{
@@ -53,9 +87,13 @@ func main() {
 
 	// Start server in goroutine
 	go func() {
-		log.Printf("Starting User Service on %s:%d", cfg.Server.Host, cfg.Server.Port)
+		log.Info().
+			Str("host", cfg.Server.Host).
+			Int("port", cfg.Server.Port).
+			Msg("HTTP server listening")
+
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("Failed to start server: %v", err)
+			log.Fatal().Err(err).Msg("Failed to start server")
 		}
 	}()
 
@@ -64,17 +102,28 @@ func main() {
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
 
-	log.Println("Shutting down server...")
+	log.Info().Msg("Shutting down server...")
 
 	// Graceful shutdown with timeout
 	ctx, cancel := context.WithTimeout(context.Background(), cfg.Server.ShutdownTimeout)
 	defer cancel()
 
 	if err := server.Shutdown(ctx); err != nil {
-		log.Fatalf("Server forced to shutdown: %v", err)
+		log.Error().Err(err).Msg("Server forced to shutdown")
 	}
 
-	log.Println("Server exited")
+	log.Info().Msg("Server stopped")
+}
+
+// initLogger initializes the logger based on configuration
+func initLogger(cfg *config.Config) error {
+	// The shared logger package is already initialized globally
+	// We just log the configuration
+	log.Info().
+		Str("level", cfg.Logger.Level).
+		Str("format", cfg.Logger.Format).
+		Msg("Logger initialized")
+	return nil
 }
 
 // initDatabase initializes the PostgreSQL connection pool
@@ -104,7 +153,7 @@ func initDatabase(cfg config.DatabaseConfig) (*pgxpool.Pool, error) {
 		return nil, fmt.Errorf("failed to ping database: %w", err)
 	}
 
-	log.Println("Database connection established")
+	log.Info().Msg("Database connection established")
 	return pool, nil
 }
 
@@ -127,83 +176,71 @@ func initRepositories(pool *pgxpool.Pool) *Repositories {
 }
 
 // setupRouter configures the HTTP router with middleware and routes
-func setupRouter(cfg *config.Config) *gin.Engine {
-	router := gin.New()
+func setupRouter(
+	cfg *config.Config,
+	jwtManager *auth.JWTManager,
+	authHandler *handlers.AuthHandler,
+	userHandler *handlers.UserHandler,
+) http.Handler {
+	r := chi.NewRouter()
 
-	// Middleware
-	router.Use(gin.Logger())
-	router.Use(gin.Recovery())
-	router.Use(corsMiddleware())
+	// Global middleware
+	r.Use(middleware.RecoveryMiddleware())
+	r.Use(middleware.LoggerMiddleware())
+	r.Use(chimiddleware.RequestID)
+	r.Use(chimiddleware.RealIP)
+	r.Use(middleware.CORSMiddleware(getCORSConfig(cfg)))
+	r.Use(chimiddleware.Compress(5))
 
 	// Health check endpoint
-	router.GET("/health", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{
-			"status":  "ok",
-			"service": "user-service",
-			"version": "1.0.0",
+	r.Get("/health", healthCheckHandler)
+
+	// API v1 routes
+	r.Route("/api/v1", func(r chi.Router) {
+		// Public authentication routes
+		r.Route("/auth", func(r chi.Router) {
+			r.Post("/signup", authHandler.Signup)
+			r.Post("/login", authHandler.Login)
+			r.Post("/refresh", authHandler.Refresh)
+			r.Post("/logout", authHandler.Logout)
+		})
+
+		// Protected user routes
+		r.Route("/users", func(r chi.Router) {
+			// Apply JWT authentication middleware
+			r.Use(middleware.AuthMiddleware(jwtManager))
+
+			r.Get("/me", userHandler.GetMe)
+			r.Patch("/me", userHandler.UpdateMe)
+			r.Delete("/me", userHandler.DeleteMe)
 		})
 	})
 
-	// API v1 routes (placeholder)
-	v1 := router.Group("/api/v1")
-	{
-		// Authentication routes (to be implemented in T5)
-		auth := v1.Group("/auth")
-		{
-			auth.POST("/register", placeholderHandler("register"))
-			auth.POST("/login", placeholderHandler("login"))
-			auth.POST("/logout", placeholderHandler("logout"))
-			auth.POST("/refresh", placeholderHandler("refresh token"))
-			auth.POST("/verify-email", placeholderHandler("verify email"))
-			auth.POST("/reset-password", placeholderHandler("reset password"))
-		}
-
-		// User routes (to be implemented in T5)
-		users := v1.Group("/users")
-		{
-			users.GET("/me", placeholderHandler("get current user"))
-			users.PUT("/me", placeholderHandler("update current user"))
-			users.PUT("/me/password", placeholderHandler("change password"))
-			users.DELETE("/me", placeholderHandler("delete account"))
-		}
-
-		// API key routes (to be implemented in T5)
-		apiKeys := v1.Group("/api-keys")
-		{
-			apiKeys.GET("", placeholderHandler("list api keys"))
-			apiKeys.POST("", placeholderHandler("create api key"))
-			apiKeys.DELETE("/:id", placeholderHandler("delete api key"))
-			apiKeys.PUT("/:id/activate", placeholderHandler("activate api key"))
-			apiKeys.PUT("/:id/deactivate", placeholderHandler("deactivate api key"))
-		}
-	}
-
-	return router
+	return r
 }
 
-// corsMiddleware adds CORS headers to responses
-func corsMiddleware() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
-		c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
-		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
-		c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-
-		if c.Request.Method == "OPTIONS" {
-			c.AbortWithStatus(http.StatusNoContent)
-			return
-		}
-
-		c.Next()
-	}
-}
-
-// placeholderHandler returns a placeholder response for unimplemented endpoints
-func placeholderHandler(action string) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		c.JSON(http.StatusNotImplemented, gin.H{
-			"error":   "not implemented",
-			"message": fmt.Sprintf("Endpoint for '%s' will be implemented in T5", action),
+// getCORSConfig returns CORS configuration based on environment
+func getCORSConfig(cfg *config.Config) *middleware.CORSConfig {
+	if cfg.Server.IsProduction() {
+		// In production, specify allowed origins
+		return middleware.ProductionCORSConfig([]string{
+			"https://yourdomain.com",
+			// Add more allowed origins
 		})
 	}
+	return middleware.DefaultCORSConfig()
+}
+
+// healthCheckHandler handles health check requests
+func healthCheckHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+
+	response := models.NewSuccessResponse(map[string]interface{}{
+		"status":  "ok",
+		"service": "user-service",
+		"version": "1.0.0",
+	}, "Service is healthy")
+
+	json.NewEncoder(w).Encode(response)
 }
