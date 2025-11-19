@@ -1,35 +1,270 @@
-# 주문 관리 서비스 (Order Management Service - OMS)
+# Order Management Service (OMS)
 
-**OMS**는 전략 엔진에서 생성된 주문 요청을 받아 실제 증권사 API로 전송하는 **실행 전담** 서비스입니다. 주문의 유효성을 검증하고, 리스크를 관리하며, API 호출 속도를 조절합니다.
+Order Management Service handles order lifecycle management, risk validation, and broker integration for the AIPX trading platform.
 
-## 🛠 주요 기능 (Features)
+## Overview
 
-### 1. gRPC 스트리밍 서버
--   **양방향 통신**: 전략 엔진과 gRPC Bidirectional Streaming으로 연결되어, 주문 요청과 체결 응답을 실시간으로 주고받습니다.
--   **저지연 처리**: HTTP 오버헤드 없이 마이크로초 단위의 통신 속도를 제공합니다.
+The OMS is responsible for:
+- Receiving order requests from strategy engines via gRPC
+- Validating orders against risk management rules
+- Submitting orders to broker APIs (Korea Investment & Securities)
+- Tracking order status and execution details
+- Publishing order events to Kafka for downstream services
 
-### 2. 리스크 엔진 (Risk Engine)
-주문이 외부로 나가기 전, 다음 규칙들을 검사하여 **팻 핑거(Fat Finger)** 사고를 방지합니다.
--   **주문 금액 한도**: 1회 주문 금액이 설정된 한도를 초과하는지 검사.
--   **가격 괴리율**: 현재가 대비 터무니없이 높거나 낮은 가격인지 검사.
--   **일일 손실 한도**: 당일 누적 손실이 허용치를 넘었는지 검사.
+## Architecture
 
-### 3. 속도 제한 (Rate Limiting)
--   **토큰 버킷 알고리즘**: KIS API의 초당 요청 제한(TPS)을 엄격히 준수합니다.
--   **우선순위 큐**: 제한 도달 시, 신규 주문보다 청산(매도) 주문을 우선적으로 처리합니다.
-
-### 4. 스마트 주문 라우팅 (Smart Order Routing)
--   **API 규격 변환**: 내부 `OrderRequest` 객체를 KIS REST API JSON 포맷으로 변환합니다.
--   **에러 핸들링**: API 호출 실패 시, 에러 코드를 분석하여 재시도 가능한 에러인지 판단합니다.
-
-## 🚀 시작하기 (Getting Started)
-
-### 초기화
-```bash
-go mod tidy
+```
+┌─────────────────┐
+│ Strategy Engine │
+└────────┬────────┘
+         │ gRPC
+         ▼
+┌─────────────────────────────────────────┐
+│     Order Management Service (OMS)      │
+│                                         │
+│  ┌──────────┐  ┌──────────┐           │
+│  │ gRPC     │  │ Risk     │           │
+│  │ Server   │─▶│ Engine   │           │
+│  └──────────┘  └──────────┘           │
+│       │              │                 │
+│       ▼              ▼                 │
+│  ┌──────────┐  ┌──────────┐           │
+│  │ Rate     │  │ Order    │           │
+│  │ Limiter  │◀─│ Repo     │           │
+│  └──────────┘  └──────────┘           │
+│       │              │                 │
+│       ▼              ▼                 │
+│  ┌──────────┐  ┌──────────┐           │
+│  │ KIS      │  │ Kafka    │           │
+│  │ Client   │  │ Producer │           │
+│  └──────────┘  └──────────┘           │
+└─────────────────────────────────────────┘
+         │              │
+         ▼              ▼
+    ┌────────┐    ┌────────┐
+    │ Broker │    │ Kafka  │
+    │  API   │    │        │
+    └────────┘    └────────┘
+         │
+         ▼
+    ┌────────┐
+    │ Postgres│
+    │  (DB)  │
+    └────────┘
 ```
 
-### 실행
-```bash
-go run main.go
+## Features
+
+### Core Functionality
+- **Order Lifecycle Management**: Create, track, update, and cancel orders
+- **Risk Validation**: Pre-trade risk checks to prevent fat-finger errors
+- **Rate Limiting**: Token bucket algorithm to respect broker API rate limits
+- **Broker Integration**: Korea Investment & Securities (KIS) REST API client
+- **Event Publishing**: Kafka integration for order events and executions
+
+### Database Schema
+
+#### Orders Table
+```sql
+CREATE TABLE orders (
+    id UUID PRIMARY KEY,
+    user_id UUID NOT NULL,
+    strategy_id VARCHAR(50),
+    symbol VARCHAR(20) NOT NULL,
+    side VARCHAR(4) NOT NULL,  -- BUY, SELL
+    order_type VARCHAR(10) NOT NULL,  -- LIMIT, MARKET
+    price NUMERIC(15, 2),
+    quantity INTEGER NOT NULL,
+    status VARCHAR(20) NOT NULL,  -- PENDING, SENT, FILLED, REJECTED, CANCELLED
+    broker_order_id VARCHAR(50),
+    filled_price NUMERIC(15, 2),
+    filled_quantity INTEGER,
+    reject_reason TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
 ```
+
+#### Order Audit Log
+```sql
+CREATE TABLE order_audit_log (
+    id UUID PRIMARY KEY,
+    order_id UUID NOT NULL REFERENCES orders(id),
+    status VARCHAR(20) NOT NULL,
+    reason TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+## Configuration
+
+### Environment Variables
+
+#### Server Configuration
+- `OMS_GRPC_PORT`: gRPC server port (default: 50051)
+- `OMS_HTTP_PORT`: HTTP server port for health checks (default: 8083)
+- `SERVER_SHUTDOWN_TIMEOUT`: Graceful shutdown timeout (default: 30s)
+- `SERVER_READ_TIMEOUT`: Request read timeout (default: 10s)
+- `SERVER_WRITE_TIMEOUT`: Response write timeout (default: 10s)
+
+#### Database Configuration
+- `POSTGRES_HOST`: PostgreSQL host (default: localhost)
+- `POSTGRES_PORT`: PostgreSQL port (default: 5432)
+- `POSTGRES_USER`: Database user (default: aipx)
+- `POSTGRES_PASSWORD`: Database password
+- `POSTGRES_DB`: Database name (default: aipx)
+- `POSTGRES_MAX_CONNECTIONS`: Connection pool max size (default: 20)
+- `POSTGRES_MIN_CONNECTIONS`: Connection pool min size (default: 5)
+
+#### Redis Configuration
+- `REDIS_HOST`: Redis host (default: localhost)
+- `REDIS_PORT`: Redis port (default: 6379)
+- `REDIS_PASSWORD`: Redis password
+- `REDIS_DB`: Redis database number (default: 0)
+- `REDIS_POOL_SIZE`: Connection pool size (default: 10)
+
+#### Kafka Configuration
+- `KAFKA_BROKERS`: Comma-separated list of Kafka brokers
+- `KAFKA_TOPIC_ORDER_EVENTS`: Order events topic (default: order-events)
+- `KAFKA_TOPIC_EXECUTIONS`: Executions topic (default: executions)
+- `KAFKA_CONSUMER_GROUP`: Consumer group ID (default: oms-consumer-group)
+
+#### KIS API Configuration
+- `KIS_BASE_URL`: KIS API base URL
+- `KIS_APP_KEY`: KIS application key
+- `KIS_APP_SECRET`: KIS application secret
+- `KIS_ACCOUNT_NO`: Trading account number
+- `KIS_RATE_LIMIT_RPS`: Rate limit in requests per second (default: 20)
+
+#### Risk Management Configuration
+- `MAX_POSITION_SIZE`: Maximum position size (default: 1000000)
+- `MAX_DAILY_LOSS_PERCENT`: Maximum daily loss percentage (default: 5.0)
+- `MAX_LOSS_PER_TRADE_PERCENT`: Maximum loss per trade (default: 2.0)
+- `MAX_ORDERS_PER_MINUTE`: Order rate limit per user (default: 60)
+- `MAX_ORDERS_PER_DAY`: Daily order limit per user (default: 500)
+- `ENABLE_RISK_CHECKS`: Enable/disable risk checks (default: true)
+
+#### Logging Configuration
+- `LOG_LEVEL`: Log level (debug, info, warn, error) (default: info)
+- `LOG_FORMAT`: Log format (json, console) (default: json)
+- `LOG_OUTPUT`: Log output (stdout, stderr, file path) (default: stdout)
+
+## Getting Started
+
+### Prerequisites
+- Go 1.24 or higher
+- PostgreSQL 15+
+- Redis 7+
+- Kafka 3.5+
+
+### Installation
+
+1. Clone the repository:
+```bash
+cd services/order-management-service
+```
+
+2. Install dependencies:
+```bash
+go mod download
+```
+
+3. Run database migrations:
+```bash
+psql -U aipx -d aipx -f migrations/001_orders.sql
+```
+
+### Running the Service
+
+#### Development Mode
+```bash
+go run cmd/server/main.go
+```
+
+#### Production Build
+```bash
+go build -o bin/oms cmd/server/main.go
+./bin/oms
+```
+
+### Testing
+
+Run unit tests:
+```bash
+go test ./...
+```
+
+Run tests with coverage:
+```bash
+go test -cover ./...
+```
+
+## Project Structure
+
+```
+order-management-service/
+├── cmd/
+│   └── server/
+│       └── main.go              # Application entry point
+├── internal/
+│   ├── config/
+│   │   └── config.go            # Service configuration
+│   ├── grpc/
+│   │   └── server.go            # gRPC server (TODO: T4)
+│   ├── risk/
+│   │   └── engine.go            # Risk validation engine (TODO: T4)
+│   ├── ratelimit/
+│   │   └── limiter.go           # Rate limiting (TODO: T4)
+│   ├── broker/
+│   │   └── kis_client.go        # KIS broker client (TODO: T4)
+│   └── repository/
+│       └── order_repo.go        # Order data access layer
+├── migrations/
+│   └── 001_orders.sql           # Database schema
+├── go.mod                        # Go module definition
+├── go.sum                        # Dependency checksums
+└── README.md                     # This file
+```
+
+## Development Status
+
+### Phase 1: Basic Infrastructure (Current - T1) ✅
+- [x] Project structure setup
+- [x] Database schema and migrations
+- [x] Order repository with pgx
+- [x] Service configuration
+- [x] Main application with graceful shutdown
+- [x] Go module initialization
+
+### Phase 1: Implementation (Next - T4) 🚧
+- [ ] gRPC server implementation
+- [ ] Risk Engine implementation
+- [ ] Rate Limiter implementation
+- [ ] KIS Broker Client implementation
+- [ ] Kafka event publishing
+- [ ] Integration tests
+
+## API Reference
+
+### gRPC Service (To be implemented in T4)
+
+```protobuf
+service OrderService {
+  rpc CreateOrder(OrderRequest) returns (OrderResponse);
+  rpc GetOrder(GetOrderRequest) returns (OrderResponse);
+  rpc CancelOrder(CancelOrderRequest) returns (OrderResponse);
+  rpc GetUserOrders(GetUserOrdersRequest) returns (OrderListResponse);
+}
+```
+
+## Contributing
+
+Please follow Go best practices and coding standards:
+- Use `gofmt` for code formatting
+- Write unit tests for new functionality
+- Document exported functions with godoc comments
+- Handle errors explicitly
+
+## License
+
+Copyright (c) 2024 AIPX

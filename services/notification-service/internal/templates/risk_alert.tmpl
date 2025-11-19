@@ -1,0 +1,20 @@
+Risk Alert: {{.alert_type}}
+---
+ATTENTION: A risk alert has been triggered for your account.
+
+Alert Type: {{upper .alert_type}}
+Severity: {{upper .severity}}
+
+Details:
+{{.message}}
+
+Current Risk Metrics:
+- Portfolio Value: {{formatFloat .portfolio_value}}
+- Daily PnL: {{formatFloat .daily_pnl}} ({{formatPercent .daily_pnl_percent}})
+- Open Positions: {{.open_positions}}
+- Risk Score: {{.risk_score}}
+
+Action Required: {{.action_required}}
+Time: {{.timestamp}}
+
+Please review your positions and take appropriate action.

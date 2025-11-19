@@ -1,0 +1,16 @@
+Order Rejected: {{.symbol}} {{.side}}
+---
+Your {{.side}} order for {{.symbol}} was rejected.
+
+Order Details:
+- Symbol: {{.symbol}}
+- Side: {{upper .side}}
+- Quantity: {{.quantity}}
+- Price: {{formatFloat .price}}
+- Order ID: {{.order_id}}
+
+Rejection Reason: {{.reason}}
+Status: REJECTED
+Time: {{.timestamp}}
+
+Please review your order parameters and try again.

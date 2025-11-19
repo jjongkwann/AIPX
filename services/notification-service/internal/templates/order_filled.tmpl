@@ -1,0 +1,14 @@
+Order Filled: {{.symbol}} {{.side}}
+---
+Your {{.side}} order for {{.symbol}} has been filled.
+
+Order Details:
+- Symbol: {{.symbol}}
+- Side: {{upper .side}}
+- Quantity: {{.quantity}}
+- Price: {{formatFloat .price}}
+- Total: {{formatFloat .total}}
+- Order ID: {{.order_id}}
+
+Status: FILLED
+Time: {{.timestamp}}
