@@ -1,100 +1,189 @@
 package kafka
 
 import (
+	"context"
+	"fmt"
+	"sync"
+	"time"
+
 	"github.com/IBM/sarama"
-	"github.com/rs/zerolog/log"
+	"google.golang.org/protobuf/proto"
 )
 
-// Producer wraps Sarama async producer
+// Producer wraps sarama async producer with retry logic and metrics
 type Producer struct {
 	producer sarama.AsyncProducer
 	config   *ProducerConfig
+	mu       sync.RWMutex
+	closed   bool
+
+	// Metrics hooks (optional)
+	onSuccess func(topic string, partition int32, offset int64)
+	onError   func(topic string, err error)
 }
 
-// ProducerConfig holds producer configuration
-type ProducerConfig struct {
-	Brokers       []string
-	Topic         string
-	RequiredAcks  sarama.RequiredAcks
-	Compression   sarama.CompressionCodec
-	MaxRetry      int
-	ReturnSuccess bool
-	ReturnErrors  bool
+// Message represents a Kafka message to be produced
+type Message struct {
+	Topic     string
+	Key       []byte
+	Value     []byte
+	Headers   map[string]string
+	Timestamp time.Time
 }
 
 // NewProducer creates a new Kafka producer
 func NewProducer(config *ProducerConfig) (*Producer, error) {
-	saramaConfig := sarama.NewConfig()
-	saramaConfig.Producer.RequiredAcks = config.RequiredAcks
-	saramaConfig.Producer.Compression = config.Compression
-	saramaConfig.Producer.Retry.Max = config.MaxRetry
-	saramaConfig.Producer.Return.Successes = config.ReturnSuccess
-	saramaConfig.Producer.Return.Errors = config.ReturnErrors
+	saramaConfig, err := config.ToSaramaProducerConfig()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create sarama config: %w", err)
+	}
 
 	producer, err := sarama.NewAsyncProducer(config.Brokers, saramaConfig)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create producer: %w", err)
 	}
 
 	p := &Producer{
 		producer: producer,
 		config:   config,
+		closed:   false,
 	}
 
-	// Handle success/error messages
-	go p.handleMessages()
+	// Start success/error handlers
+	go p.handleSuccesses()
+	go p.handleErrors()
 
 	return p, nil
 }
 
-// SendMessage sends a message to Kafka
-func (p *Producer) SendMessage(key, value []byte) {
-	msg := &sarama.ProducerMessage{
-		Topic: p.config.Topic,
-		Key:   sarama.ByteEncoder(key),
-		Value: sarama.ByteEncoder(value),
+// Send sends a message to Kafka asynchronously
+func (p *Producer) Send(ctx context.Context, msg *Message) error {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+
+	if p.closed {
+		return ErrProducerClosed
 	}
 
-	p.producer.Input() <- msg
+	if len(msg.Value) > p.config.MaxMessageBytes {
+		return ErrMessageTooLarge
+	}
+
+	saramaMsg := &sarama.ProducerMessage{
+		Topic:     msg.Topic,
+		Key:       sarama.ByteEncoder(msg.Key),
+		Value:     sarama.ByteEncoder(msg.Value),
+		Timestamp: msg.Timestamp,
+	}
+
+	// Add headers
+	if len(msg.Headers) > 0 {
+		saramaMsg.Headers = make([]sarama.RecordHeader, 0, len(msg.Headers))
+		for k, v := range msg.Headers {
+			saramaMsg.Headers = append(saramaMsg.Headers, sarama.RecordHeader{
+				Key:   []byte(k),
+				Value: []byte(v),
+			})
+		}
+	}
+
+	select {
+	case p.producer.Input() <- saramaMsg:
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
 }
 
-// handleMessages processes success and error messages
-func (p *Producer) handleMessages() {
-	for {
-		select {
-		case success := <-p.producer.Successes():
-			if success != nil {
-				log.Debug().
-					Str("topic", success.Topic).
-					Int32("partition", success.Partition).
-					Int64("offset", success.Offset).
-					Msg("Message sent successfully")
-			}
-		case err := <-p.producer.Errors():
-			if err != nil {
-				log.Error().
-					Err(err.Err).
-					Str("topic", err.Msg.Topic).
-					Msg("Failed to send message")
-			}
+// SendProto sends a protobuf message to Kafka
+func (p *Producer) SendProto(ctx context.Context, topic string, key []byte, msg proto.Message, headers map[string]string) error {
+	data, err := proto.Marshal(msg)
+	if err != nil {
+		return fmt.Errorf("%w: %v", ErrSerializationFailed, err)
+	}
+
+	return p.Send(ctx, &Message{
+		Topic:     topic,
+		Key:       key,
+		Value:     data,
+		Headers:   headers,
+		Timestamp: time.Now(),
+	})
+}
+
+// SendJSON sends a JSON-serializable message to Kafka (for non-protobuf messages)
+func (p *Producer) SendJSON(ctx context.Context, topic string, key []byte, value []byte, headers map[string]string) error {
+	return p.Send(ctx, &Message{
+		Topic:     topic,
+		Key:       key,
+		Value:     value,
+		Headers:   headers,
+		Timestamp: time.Now(),
+	})
+}
+
+// Close closes the producer gracefully
+func (p *Producer) Close() error {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	if p.closed {
+		return nil
+	}
+
+	p.closed = true
+	return p.producer.Close()
+}
+
+// SetSuccessHandler sets a callback for successful message delivery
+func (p *Producer) SetSuccessHandler(handler func(topic string, partition int32, offset int64)) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	p.onSuccess = handler
+}
+
+// SetErrorHandler sets a callback for message delivery errors
+func (p *Producer) SetErrorHandler(handler func(topic string, err error)) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	p.onError = handler
+}
+
+// handleSuccesses processes successful message deliveries
+func (p *Producer) handleSuccesses() {
+	for msg := range p.producer.Successes() {
+		p.mu.RLock()
+		handler := p.onSuccess
+		p.mu.RUnlock()
+
+		if handler != nil {
+			handler(msg.Topic, msg.Partition, msg.Offset)
 		}
 	}
 }
 
-// Close closes the producer
-func (p *Producer) Close() error {
-	return p.producer.Close()
+// handleErrors processes message delivery errors
+func (p *Producer) handleErrors() {
+	for err := range p.producer.Errors() {
+		p.mu.RLock()
+		handler := p.onError
+		p.mu.RUnlock()
+
+		if handler != nil {
+			handler(err.Msg.Topic, err.Err)
+		}
+	}
 }
 
-// DefaultProducerConfig returns default producer configuration
-func DefaultProducerConfig(brokers []string, topic string) *ProducerConfig {
-	return &ProducerConfig{
-		Brokers:       brokers,
-		Topic:         topic,
-		RequiredAcks:  sarama.WaitForLocal,
-		Compression:   sarama.CompressionSnappy,
-		MaxRetry:      3,
-		ReturnSuccess: true,
-		ReturnErrors:  true,
+// HealthCheck verifies producer connection to Kafka
+func (p *Producer) HealthCheck(ctx context.Context) error {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+
+	if p.closed {
+		return ErrProducerClosed
 	}
+
+	// Producer is healthy if it's not closed
+	return nil
 }

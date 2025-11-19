@@ -28,8 +28,8 @@ proto:
 # Clean generated files
 clean:
 	@echo "🧹 Cleaning generated files..."
-	@rm -rf shared/go/gen/*
-	@rm -rf shared/python/gen/*
+	@rm -rf shared/go/pkg/pb/*
+	@rm -rf shared/python/common/pb/*
 	@echo "✅ Clean complete"
 
 # Start Docker Compose development environment

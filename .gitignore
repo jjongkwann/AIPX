@@ -30,6 +30,13 @@ target/
 *.pyc
 __pycache__/
 
+# Generated Protobuf files
+shared/go/pkg/pb/*.pb.go
+shared/go/pkg/pb/*_grpc.pb.go
+shared/python/common/pb/*_pb2.py
+shared/python/common/pb/*_pb2_grpc.py
+shared/python/common/pb/__pycache__/
+
 # Logs
 *.log
 logs/
