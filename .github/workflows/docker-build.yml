@@ -165,7 +165,7 @@ jobs:
 
       - name: Build and push Docker image
         if: steps.dockerfile_check.outputs.exists == 'true'
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: .
           file: services/${{ matrix.service }}/Dockerfile
