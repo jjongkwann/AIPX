@@ -1,0 +1,82 @@
+kafka:
+  bootstrap_servers: "localhost:9092"
+  consumer_group: "strategy-worker"
+  auto_offset_reset: "earliest"
+  enable_auto_commit: false
+  max_poll_records: 10
+  session_timeout_ms: 30000
+  topics:
+    approved: "strategy.approved"
+    execution: "strategy.execution"
+    positions: "strategy.positions"
+    errors: "strategy.errors"
+
+oms_grpc:
+  host: "localhost"
+  port: 50051
+  timeout: 5
+  max_message_size: 4194304  # 4MB
+  retry:
+    max_attempts: 3
+    backoff_ms: 1000
+    max_backoff_ms: 10000
+    exponential_base: 2
+
+database:
+  host: "localhost"
+  port: 5432
+  database: "aipx"
+  user: "postgres"
+  password: "${DB_PASSWORD}"
+  min_pool_size: 5
+  max_pool_size: 20
+  command_timeout: 60
+  ssl_mode: "prefer"
+
+redis:
+  host: "localhost"
+  port: 6379
+  db: 0
+  password: "${REDIS_PASSWORD}"
+  max_connections: 50
+  socket_timeout: 5
+  socket_connect_timeout: 5
+  decode_responses: false
+  key_prefix: "strategy:worker:"
+
+risk:
+  max_total_exposure: 1000000.00  # $1M total
+  max_position_size: 0.30         # 30% of portfolio per symbol
+  max_daily_loss: 0.05            # 5% daily loss limit
+  max_daily_loss_amount: 50000.00 # $50k absolute daily loss
+  stop_loss_buffer: 0.02          # 2% buffer for stop loss
+  min_order_size: 100.00          # $100 minimum order
+  max_order_size: 100000.00       # $100k maximum single order
+
+execution:
+  rebalance_interval: 300         # 5 minutes
+  position_check_interval: 60     # 1 minute
+  order_timeout: 30               # 30 seconds
+  max_retries: 3
+  batch_size: 10                  # max orders per batch
+
+logging:
+  level: "INFO"
+  format: "json"
+  output: "stdout"
+  file:
+    enabled: false
+    path: "/var/log/strategy-worker/app.log"
+    max_bytes: 10485760  # 10MB
+    backup_count: 5
+
+monitoring:
+  enabled: true
+  prometheus_port: 9091
+  health_check_port: 8080
+
+service:
+  name: "strategy-worker"
+  environment: "${ENVIRONMENT:development}"
+  shutdown_timeout: 30
+  graceful_shutdown: true
