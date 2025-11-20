@@ -41,3 +41,9 @@ shared/python/common/pb/__pycache__/
 *.log
 logs/
 TODO/
+
+# Summary and completion documents
+*_SUMMARY.md
+*SUMMARY.md
+*_COMPLETION.md
+*COMPLETION.md
