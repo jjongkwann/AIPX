@@ -73,7 +73,7 @@ func TestAESGCMEncryptor_EncryptDecrypt(t *testing.T) {
 		},
 		{
 			name:      "api key",
-			plaintext: "sk_live_1234567890abcdef",
+			plaintext: "test_api_key_1234567890abcdef",
 		},
 		{
 			name:      "long text",
@@ -334,5 +334,284 @@ func BenchmarkAESGCMEncryptor_Decrypt(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_, _ = encryptor.Decrypt(ciphertext)
+	}
+}
+
+func TestAESGCMEncryptor_NonceUniqueness(t *testing.T) {
+	key, err := GenerateKey()
+	if err != nil {
+		t.Fatalf("failed to generate key: %v", err)
+	}
+
+	encryptor, err := NewAESGCMEncryptor(key)
+	if err != nil {
+		t.Fatalf("failed to create encryptor: %v", err)
+	}
+
+	plaintext := "Same plaintext"
+	nonces := make(map[string]bool)
+	iterations := 1000
+
+	for i := 0; i < iterations; i++ {
+		ciphertext, err := encryptor.Encrypt(plaintext)
+		if err != nil {
+			t.Fatalf("encryption failed at iteration %d: %v", i, err)
+		}
+
+		// Nonce is first 12 bytes of ciphertext (after base64 decode)
+		// For this test, we just verify ciphertext uniqueness
+		if nonces[ciphertext] {
+			t.Errorf("Duplicate ciphertext detected at iteration %d", i)
+		}
+		nonces[ciphertext] = true
+	}
+
+	if len(nonces) != iterations {
+		t.Errorf("Generated %d unique ciphertexts, want %d", len(nonces), iterations)
+	}
+}
+
+func TestAESGCMEncryptor_WrongKey(t *testing.T) {
+	key1, _ := GenerateKey()
+	key2, _ := GenerateKey()
+
+	encryptor1, _ := NewAESGCMEncryptor(key1)
+	encryptor2, _ := NewAESGCMEncryptor(key2)
+
+	plaintext := "sensitive data"
+	ciphertext, err := encryptor1.Encrypt(plaintext)
+	if err != nil {
+		t.Fatalf("encryption failed: %v", err)
+	}
+
+	// Try to decrypt with wrong key
+	_, err = encryptor2.Decrypt(ciphertext)
+	if err == nil {
+		t.Error("decryption should fail with wrong key")
+	}
+
+	// Error should be wrapped ErrDecryption
+	if !strings.Contains(err.Error(), "decryption failed") {
+		t.Errorf("expected decryption error, got %v", err)
+	}
+}
+
+func TestAESGCMEncryptor_IntegrityCheck(t *testing.T) {
+	key, _ := GenerateKey()
+	encryptor, _ := NewAESGCMEncryptor(key)
+
+	plaintext := "important data"
+	ciphertext, err := encryptor.Encrypt(plaintext)
+	if err != nil {
+		t.Fatalf("encryption failed: %v", err)
+	}
+
+	// Tamper with different parts of the ciphertext
+	tests := []struct {
+		name   string
+		tamper func(string) string
+	}{
+		{
+			name: "flip first bit",
+			tamper: func(s string) string {
+				if len(s) == 0 {
+					return s
+				}
+				b := []byte(s)
+				b[0] ^= 1
+				return string(b)
+			},
+		},
+		{
+			name: "flip last bit",
+			tamper: func(s string) string {
+				if len(s) == 0 {
+					return s
+				}
+				b := []byte(s)
+				b[len(b)-1] ^= 1
+				return string(b)
+			},
+		},
+		{
+			name: "truncate",
+			tamper: func(s string) string {
+				if len(s) <= 1 {
+					return s
+				}
+				return s[:len(s)-1]
+			},
+		},
+		{
+			name: "append",
+			tamper: func(s string) string {
+				return s + "A"
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tampered := tt.tamper(ciphertext)
+			_, err := encryptor.Decrypt(tampered)
+			if err == nil {
+				t.Error("decryption should fail for tampered ciphertext")
+			}
+		})
+	}
+}
+
+func TestAESGCMEncryptor_SensitiveData(t *testing.T) {
+	key, _ := GenerateKey()
+	encryptor, _ := NewAESGCMEncryptor(key)
+
+	sensitiveData := []string{
+		"test_api_key_51HxLPqJR7zLfGCxWgVxoQeU8Lk2FsH6ky3G9Rf8H4e", // API key
+		"test_public_key_51HxLPqJR7zLfGCxWgVxoQeU8Lk2FsH6ky3G9Rf8H4e", // Public key
+		"test_slack_token_1234567890_1234567890123_AbCdEfGhIjKlMnOpQrStUvWx", // Slack token
+		"test_github_token_1234567890ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghij", // GitHub token
+	}
+
+	for _, data := range sensitiveData {
+		t.Run("encrypt_"+data[:10], func(t *testing.T) {
+			ciphertext, err := encryptor.Encrypt(data)
+			if err != nil {
+				t.Fatalf("encryption failed: %v", err)
+			}
+
+			// Verify ciphertext doesn't contain plaintext
+			if strings.Contains(ciphertext, data) {
+				t.Error("ciphertext contains plaintext data")
+			}
+
+			// Verify decryption
+			decrypted, err := encryptor.Decrypt(ciphertext)
+			if err != nil {
+				t.Fatalf("decryption failed: %v", err)
+			}
+
+			if decrypted != data {
+				t.Error("decrypted data doesn't match original")
+			}
+		})
+	}
+}
+
+func TestAESGCMEncryptor_NonceSize(t *testing.T) {
+	key, _ := GenerateKey()
+	encryptor, _ := NewAESGCMEncryptor(key)
+
+	plaintext := "test data"
+	ciphertext, err := encryptor.Encrypt(plaintext)
+	if err != nil {
+		t.Fatalf("encryption failed: %v", err)
+	}
+
+	// Decode base64 to check nonce size
+	// GCM nonce should be 12 bytes
+	// The ciphertext format is: nonce || ciphertext || tag
+	// Total base64 encoded length should be reasonable
+	if len(ciphertext) < 16 { // Minimum base64 encoded size
+		t.Errorf("ciphertext too short: %d bytes", len(ciphertext))
+	}
+}
+
+func TestAESGCMEncryptor_AuthenticationTag(t *testing.T) {
+	key, _ := GenerateKey()
+	encryptor, _ := NewAESGCMEncryptor(key)
+
+	plaintext := "authenticated data"
+	ciphertext, err := encryptor.Encrypt(plaintext)
+	if err != nil {
+		t.Fatalf("encryption failed: %v", err)
+	}
+
+	// GCM automatically includes 16-byte authentication tag
+	// Verify ciphertext is longer than plaintext + nonce
+	// Base64 encoding expands by ~33%
+	minExpectedLength := ((12 + len(plaintext) + 16) * 4 / 3)
+	if len(ciphertext) < minExpectedLength {
+		t.Errorf("ciphertext length %d too short, expected at least %d",
+			len(ciphertext), minExpectedLength)
+	}
+}
+
+func TestRotatableEncryptor_WithoutPreviousKey(t *testing.T) {
+	currentKey, _ := GenerateKey()
+
+	// Create rotatable encryptor without previous key
+	rotatable, err := NewRotatableEncryptor(currentKey, nil)
+	if err != nil {
+		t.Fatalf("failed to create rotatable encryptor: %v", err)
+	}
+
+	plaintext := "test data"
+
+	// Encrypt with current key
+	ciphertext, err := rotatable.Encrypt(plaintext)
+	if err != nil {
+		t.Fatalf("encryption failed: %v", err)
+	}
+
+	// Decrypt should work
+	decrypted, err := rotatable.Decrypt(ciphertext)
+	if err != nil {
+		t.Fatalf("decryption failed: %v", err)
+	}
+
+	if decrypted != plaintext {
+		t.Error("decrypted data doesn't match original")
+	}
+}
+
+func TestAESGCMEncryptor_ConcurrentEncryption(t *testing.T) {
+	key, _ := GenerateKey()
+	encryptor, _ := NewAESGCMEncryptor(key)
+
+	plaintext := "concurrent test"
+	iterations := 100
+
+	// Test concurrent encryption
+	done := make(chan bool, iterations)
+	ciphertexts := make(chan string, iterations)
+
+	for i := 0; i < iterations; i++ {
+		go func() {
+			ciphertext, err := encryptor.Encrypt(plaintext)
+			if err != nil {
+				t.Errorf("concurrent encryption failed: %v", err)
+			}
+			ciphertexts <- ciphertext
+			done <- true
+		}()
+	}
+
+	// Wait for all to complete
+	for i := 0; i < iterations; i++ {
+		<-done
+	}
+	close(ciphertexts)
+
+	// Verify all ciphertexts are unique and decrypt correctly
+	seen := make(map[string]bool)
+	count := 0
+	for ciphertext := range ciphertexts {
+		if seen[ciphertext] {
+			t.Error("duplicate ciphertext in concurrent encryption")
+		}
+		seen[ciphertext] = true
+
+		decrypted, err := encryptor.Decrypt(ciphertext)
+		if err != nil {
+			t.Errorf("decryption failed: %v", err)
+		}
+		if decrypted != plaintext {
+			t.Error("decrypted data doesn't match original")
+		}
+		count++
+	}
+
+	if count != iterations {
+		t.Errorf("expected %d ciphertexts, got %d", iterations, count)
 	}
 }

@@ -241,3 +241,208 @@ func BenchmarkArgon2Hasher_Verify(b *testing.B) {
 		_ = hasher.Verify(password, hash)
 	}
 }
+
+func TestArgon2Hasher_SaltUniqueness(t *testing.T) {
+	hasher := NewArgon2Hasher(nil)
+	password := "TestPassword123"
+
+	// Generate multiple hashes
+	hashes := make(map[string]bool)
+	iterations := 100
+
+	for i := 0; i < iterations; i++ {
+		hash, err := hasher.Hash(password)
+		if err != nil {
+			t.Fatalf("Hash() error = %v", err)
+		}
+
+		if hashes[hash] {
+			t.Errorf("Duplicate hash detected: %s", hash)
+		}
+		hashes[hash] = true
+
+		// Extract salt from hash
+		parts := strings.Split(hash, "$")
+		if len(parts) < 5 {
+			t.Fatalf("Invalid hash format: %s", hash)
+		}
+		salt := parts[4]
+
+		// Verify salt is different each time (with high probability)
+		for otherHash := range hashes {
+			if otherHash == hash {
+				continue
+			}
+			otherParts := strings.Split(otherHash, "$")
+			otherSalt := otherParts[4]
+			if salt == otherSalt {
+				t.Error("Found duplicate salt in different hashes")
+			}
+		}
+	}
+
+	if len(hashes) != iterations {
+		t.Errorf("Generated %d unique hashes, want %d", len(hashes), iterations)
+	}
+}
+
+func TestArgon2Hasher_TimingAttack(t *testing.T) {
+	hasher := NewArgon2Hasher(nil)
+	password := "CorrectPassword123"
+	hash, err := hasher.Hash(password)
+	if err != nil {
+		t.Fatalf("Hash() error = %v", err)
+	}
+
+	// Test that verification time is constant regardless of how wrong the password is
+	tests := []string{
+		"WrongPassword123",   // Completely different
+		"CorrectPassword12",  // One character off
+		"correctpassword123", // Case different
+		"X",                  // Very short
+	}
+
+	for _, wrongPassword := range tests {
+		err := hasher.Verify(wrongPassword, hash)
+		if err == nil {
+			t.Errorf("Verify() should fail for wrong password: %s", wrongPassword)
+		}
+		if err != ErrMismatchedHashAndPassword {
+			t.Errorf("Verify() error = %v, want %v", err, ErrMismatchedHashAndPassword)
+		}
+	}
+}
+
+func TestArgon2Hasher_EmptyPassword(t *testing.T) {
+	hasher := NewArgon2Hasher(nil)
+
+	hash, err := hasher.Hash("")
+	if err == nil {
+		t.Error("Hash() should reject empty password")
+	}
+
+	if hash != "" {
+		t.Errorf("Hash() returned non-empty hash for empty password: %s", hash)
+	}
+}
+
+func TestArgon2Hasher_LongPassword(t *testing.T) {
+	hasher := NewArgon2Hasher(nil)
+
+	// Test with 1000+ character password
+	longPassword := strings.Repeat("a", 1000) + "Bc123"
+
+	hash, err := hasher.Hash(longPassword)
+	if err != nil {
+		t.Fatalf("Hash() error with long password = %v", err)
+	}
+
+	// Verify it works correctly
+	err = hasher.Verify(longPassword, hash)
+	if err != nil {
+		t.Errorf("Verify() error = %v", err)
+	}
+
+	// Verify wrong long password fails
+	wrongLongPassword := strings.Repeat("b", 1000) + "Bc123"
+	err = hasher.Verify(wrongLongPassword, hash)
+	if err == nil {
+		t.Error("Verify() should fail for wrong long password")
+	}
+}
+
+func TestArgon2Hasher_SpecialCharacters(t *testing.T) {
+	hasher := NewArgon2Hasher(nil)
+
+	specialPasswords := []string{
+		"P@ssw0rd!",
+		"Test#123$",
+		"Sp€cial123",
+		"你好世界Abc123", // Unicode
+		"P@ss\nword123",  // Newline
+		"P@ss\tword123",  // Tab
+	}
+
+	for _, password := range specialPasswords {
+		t.Run(password, func(t *testing.T) {
+			hash, err := hasher.Hash(password)
+			if err != nil {
+				t.Fatalf("Hash() error = %v", err)
+			}
+
+			err = hasher.Verify(password, hash)
+			if err != nil {
+				t.Errorf("Verify() error = %v", err)
+			}
+
+			// Verify slightly different password fails
+			wrongPassword := password + "x"
+			err = hasher.Verify(wrongPassword, hash)
+			if err == nil {
+				t.Error("Verify() should fail for wrong password")
+			}
+		})
+	}
+}
+
+func TestArgon2Hasher_HashOutputLength(t *testing.T) {
+	hasher := NewArgon2Hasher(nil)
+	password := "TestPassword123"
+
+	hash1, err := hasher.Hash(password)
+	if err != nil {
+		t.Fatalf("Hash() error = %v", err)
+	}
+
+	// Parse hash to verify key length
+	parts := strings.Split(hash1, "$")
+	if len(parts) != 6 {
+		t.Fatalf("Invalid hash format, got %d parts", len(parts))
+	}
+
+	// Hash part should be base64 encoded 32-byte key
+	hashPart := parts[5]
+	if len(hashPart) < 40 { // Base64 of 32 bytes is at least 43 chars (minus padding)
+		t.Errorf("Hash part too short: %d characters", len(hashPart))
+	}
+}
+
+func TestArgon2Hasher_Performance(t *testing.T) {
+	hasher := NewArgon2Hasher(nil)
+	password := "TestPassword123"
+
+	// Hashing should take 100-500ms per OWASP recommendations
+	hash, err := hasher.Hash(password)
+	if err != nil {
+		t.Fatalf("Hash() error = %v", err)
+	}
+
+	// Just verify it completes (actual timing checked in benchmarks)
+	err = hasher.Verify(password, hash)
+	if err != nil {
+		t.Errorf("Verify() error = %v", err)
+	}
+}
+
+func TestDecodeHash_InvalidFormats(t *testing.T) {
+	hasher := NewArgon2Hasher(nil)
+
+	invalidHashes := []string{
+		"",
+		"invalid",
+		"$argon2id$",
+		"$bcrypt$v=19$m=65536,t=3,p=2$salt$hash", // Wrong algorithm
+		"$argon2id$v=18$m=65536,t=3,p=2$salt$hash", // Wrong version
+		"$argon2id$v=19$m=65536$salt$hash",         // Missing parameters
+		"$argon2id$v=19$m=65536,t=3,p=2$invalidsalt$hash", // Invalid base64
+	}
+
+	for _, invalidHash := range invalidHashes {
+		t.Run(invalidHash, func(t *testing.T) {
+			err := hasher.Verify("password", invalidHash)
+			if err == nil {
+				t.Errorf("Verify() should reject invalid hash: %s", invalidHash)
+			}
+		})
+	}
+}

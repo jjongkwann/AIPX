@@ -12,13 +12,14 @@ import (
 
 // Config holds the configuration for the Order Management Service
 type Config struct {
-	Server   ServerConfig
-	Database DatabaseConfig
-	Redis    RedisConfig
-	Kafka    KafkaConfig
-	KIS      KISConfig
-	Risk     RiskConfig
-	Logger   LoggerConfig
+	Server    ServerConfig
+	Database  DatabaseConfig
+	Redis     RedisConfig
+	Kafka     KafkaConfig
+	KIS       KISConfig
+	Risk      RiskConfig
+	RateLimit RateLimitConfig
+	Logger    LoggerConfig
 }
 
 // ServerConfig holds server-related configuration
@@ -94,6 +95,17 @@ type RiskConfig struct {
 	MaxOrdersPerDay        int
 	DefaultOrderTimeout    time.Duration
 	EnableRiskChecks       bool
+	MaxOrderValue          float64
+	PriceDeviation         float64
+	DailyLossLimit         float64
+	AllowedSymbols         []string
+	DuplicateWindow        int64
+}
+
+// RateLimitConfig holds rate limiting configuration
+type RateLimitConfig struct {
+	Rate  int // orders per second per user
+	Burst int // burst capacity
 }
 
 // LoggerConfig holds logger configuration
@@ -174,6 +186,15 @@ func LoadConfig() (*Config, error) {
 			MaxOrdersPerDay:        getEnvAsInt("MAX_ORDERS_PER_DAY", 500),
 			DefaultOrderTimeout:    getEnvAsDuration("DEFAULT_ORDER_TIMEOUT", time.Duration(sharedCfg.DefaultOrderTimeout)*time.Second),
 			EnableRiskChecks:       getEnvAsBool("ENABLE_RISK_CHECKS", true),
+			MaxOrderValue:          getEnvAsFloat("RISK_MAX_ORDER_VALUE", 10000000.0), // 1000만원
+			PriceDeviation:         getEnvAsFloat("RISK_PRICE_DEVIATION", 0.05),        // 5%
+			DailyLossLimit:         getEnvAsFloat("RISK_DAILY_LOSS_LIMIT", 1000000.0),  // 100만원
+			AllowedSymbols:         getEnvAsSlice("RISK_ALLOWED_SYMBOLS", []string{}),
+			DuplicateWindow:        int64(getEnvAsInt("RISK_DUPLICATE_WINDOW", 10)), // 10 seconds
+		},
+		RateLimit: RateLimitConfig{
+			Rate:  getEnvAsInt("RATE_LIMIT_RATE", 5),  // 5 orders per second
+			Burst: getEnvAsInt("RATE_LIMIT_BURST", 10), // burst of 10
 		},
 		Logger: LoggerConfig{
 			Level:        getEnv("LOG_LEVEL", sharedCfg.LogLevel),

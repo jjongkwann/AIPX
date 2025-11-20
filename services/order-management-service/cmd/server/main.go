@@ -8,11 +8,17 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/IBM/sarama"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/redis/go-redis/v9"
 	"github.com/rs/zerolog/log"
 
+	"github.com/jjongkwann/aipx/services/order-management-service/internal/broker"
 	"github.com/jjongkwann/aipx/services/order-management-service/internal/config"
+	grpcServer "github.com/jjongkwann/aipx/services/order-management-service/internal/grpc"
+	"github.com/jjongkwann/aipx/services/order-management-service/internal/ratelimit"
 	"github.com/jjongkwann/aipx/services/order-management-service/internal/repository"
+	"github.com/jjongkwann/aipx/services/order-management-service/internal/risk"
 	sharedLogger "github.com/jjongkwann/aipx/shared/go/pkg/logger"
 )
 
@@ -63,73 +69,128 @@ func run() error {
 	log.Info().Msg("Database connection pool initialized")
 
 	// Initialize repository
-	_ = repository.NewPostgresOrderRepository(dbPool)
+	orderRepo := repository.NewPostgresOrderRepository(dbPool)
 	log.Info().Msg("Order repository initialized")
 
-	// TODO (T4): Initialize Redis client
-	// redisClient := redis.NewClient(&redis.Options{
-	//     Addr:     fmt.Sprintf("%s:%s", cfg.Redis.Host, cfg.Redis.Port),
-	//     Password: cfg.Redis.Password,
-	//     DB:       cfg.Redis.DB,
-	// })
-	// defer redisClient.Close()
+	// Initialize Redis client
+	redisClient := redis.NewClient(&redis.Options{
+		Addr:         fmt.Sprintf("%s:%s", cfg.Redis.Host, cfg.Redis.Port),
+		Password:     cfg.Redis.Password,
+		DB:           cfg.Redis.DB,
+		PoolSize:     cfg.Redis.PoolSize,
+		DialTimeout:  cfg.Redis.ConnectTimeout,
+		ReadTimeout:  cfg.Redis.ReadTimeout,
+		WriteTimeout: cfg.Redis.WriteTimeout,
+	})
+	defer redisClient.Close()
 
-	// TODO (T4): Initialize Kafka producer
-	// kafkaProducer, err := kafka.NewProducer(&kafka.Config{
-	//     Brokers: cfg.Kafka.Brokers,
-	// })
-	// if err != nil {
-	//     return fmt.Errorf("failed to initialize kafka producer: %w", err)
-	// }
-	// defer kafkaProducer.Close()
+	// Test Redis connection
+	if err := redisClient.Ping(ctx).Err(); err != nil {
+		return fmt.Errorf("failed to connect to redis: %w", err)
+	}
+	log.Info().Msg("Redis connection established")
 
-	// TODO (T4): Initialize Risk Engine
-	// riskEngine := risk.NewEngine(&risk.Config{
-	//     MaxPositionSize:        cfg.Risk.MaxPositionSize,
-	//     MaxDailyLossPercent:    cfg.Risk.MaxDailyLossPercent,
-	//     MaxLossPerTradePercent: cfg.Risk.MaxLossPerTradePercent,
-	//     MaxOrdersPerMinute:     cfg.Risk.MaxOrdersPerMinute,
-	//     MaxOrdersPerDay:        cfg.Risk.MaxOrdersPerDay,
-	// })
+	// Initialize Kafka producer
+	kafkaConfig := sarama.NewConfig()
+	kafkaConfig.Producer.Return.Successes = true
+	kafkaConfig.Producer.RequiredAcks = sarama.WaitForAll
+	kafkaConfig.Producer.Retry.Max = 3
+	kafkaConfig.Producer.Compression = sarama.CompressionSnappy
 
-	// TODO (T4): Initialize Rate Limiter
-	// rateLimiter := ratelimit.NewLimiter(redisClient, &ratelimit.Config{
-	//     RequestsPerMinute: cfg.Risk.MaxOrdersPerMinute,
-	// })
+	kafkaProducer, err := sarama.NewSyncProducer(cfg.Kafka.Brokers, kafkaConfig)
+	if err != nil {
+		return fmt.Errorf("failed to create kafka producer: %w", err)
+	}
+	defer kafkaProducer.Close()
+	log.Info().Msg("Kafka producer initialized")
 
-	// TODO (T4): Initialize KIS Broker Client
-	// kisClient := broker.NewKISClient(&broker.Config{
-	//     BaseURL:      cfg.KIS.BaseURL,
-	//     AppKey:       cfg.KIS.AppKey,
-	//     AppSecret:    cfg.KIS.AppSecret,
-	//     AccountNo:    cfg.KIS.AccountNo,
-	//     Timeout:      cfg.KIS.Timeout,
-	//     MaxRetries:   cfg.KIS.MaxRetries,
-	//     RetryDelay:   cfg.KIS.RetryDelay,
-	//     RateLimitRPS: cfg.KIS.RateLimitRPS,
-	// })
+	// Initialize Risk Engine
+	riskConfig := &risk.Config{
+		MaxOrderValue:    cfg.Risk.MaxOrderValue,
+		PriceDeviation:   cfg.Risk.PriceDeviation,
+		DailyLossLimit:   cfg.Risk.DailyLossLimit,
+		AllowedSymbols:   cfg.Risk.AllowedSymbols,
+		DuplicateWindow:  cfg.Risk.DuplicateWindow,
+		EnableRiskChecks: cfg.Risk.EnableRiskChecks,
+	}
+	riskDeps := &risk.Dependencies{
+		Repository:  orderRepo,
+		RedisClient: redisClient,
+	}
+	riskEngine, err := risk.NewEngine(riskConfig, riskDeps)
+	if err != nil {
+		return fmt.Errorf("failed to create risk engine: %w", err)
+	}
+	log.Info().Msg("Risk engine initialized")
 
-	// TODO (T4): Initialize gRPC server
-	// grpcServer, err := grpc.NewServer(&grpc.Config{
-	//     Port:           cfg.Server.GRPCPort,
-	//     OrderRepo:      orderRepo,
-	//     RiskEngine:     riskEngine,
-	//     RateLimiter:    rateLimiter,
-	//     KISClient:      kisClient,
-	//     KafkaProducer:  kafkaProducer,
-	// })
-	// if err != nil {
-	//     return fmt.Errorf("failed to create grpc server: %w", err)
-	// }
+	// Initialize Rate Limiter
+	rateLimiterConfig := &ratelimit.Config{
+		Rate:  cfg.RateLimit.Rate,
+		Burst: cfg.RateLimit.Burst,
+	}
+	rateLimiter, err := ratelimit.NewLimiter(redisClient, rateLimiterConfig)
+	if err != nil {
+		return fmt.Errorf("failed to create rate limiter: %w", err)
+	}
+	log.Info().Msg("Rate limiter initialized")
 
-	// TODO (T4): Start gRPC server in goroutine
-	// go func() {
-	//     log.Info().Str("port", cfg.Server.GRPCPort).Msg("Starting gRPC server")
-	//     if err := grpcServer.Start(); err != nil {
-	//         log.Error().Err(err).Msg("gRPC server error")
-	//         cancel()
-	//     }
-	// }()
+	// Initialize KIS Broker Client
+	kisClient, err := broker.NewKISClient(&broker.Config{
+		BaseURL:    cfg.KIS.BaseURL,
+		AppKey:     cfg.KIS.AppKey,
+		AppSecret:  cfg.KIS.AppSecret,
+		AccountNo:  cfg.KIS.AccountNo,
+		Timeout:    cfg.KIS.Timeout,
+		MaxRetries: cfg.KIS.MaxRetries,
+		RetryDelay: cfg.KIS.RetryDelay,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to create KIS client: %w", err)
+	}
+	log.Info().Msg("KIS client initialized")
+
+	// Initialize Order Executor
+	orderExecutor := broker.NewOrderExecutor(
+		kisClient,
+		orderRepo,
+		kafkaProducer,
+		cfg.Kafka.TopicOrderEvents,
+	)
+	log.Info().Msg("Order executor initialized")
+
+	// Initialize gRPC handler
+	handlerConfig := &grpcServer.HandlerConfig{
+		RiskEngine:    riskEngine,
+		RateLimiter:   rateLimiter,
+		OrderExecutor: orderExecutor,
+		Repository:    orderRepo,
+	}
+	handler, err := grpcServer.NewOrderServiceHandler(handlerConfig)
+	if err != nil {
+		return fmt.Errorf("failed to create gRPC handler: %w", err)
+	}
+	log.Info().Msg("gRPC handler initialized")
+
+	// Initialize gRPC server
+	serverConfig := &grpcServer.Config{
+		Port:             cfg.Server.GRPCPort,
+		ShutdownTimeout:  cfg.Server.ShutdownTimeout,
+		EnableReflection: cfg.Server.EnableReflection,
+	}
+	server, err := grpcServer.NewServer(serverConfig, handler)
+	if err != nil {
+		return fmt.Errorf("failed to create gRPC server: %w", err)
+	}
+	log.Info().Msg("gRPC server initialized")
+
+	// Start gRPC server in goroutine
+	go func() {
+		log.Info().Str("port", cfg.Server.GRPCPort).Msg("Starting gRPC server")
+		if err := server.Start(); err != nil {
+			log.Error().Err(err).Msg("gRPC server error")
+			cancel()
+		}
+	}()
 
 	// Setup graceful shutdown
 	sigChan := make(chan os.Signal, 1)
@@ -147,16 +208,28 @@ func run() error {
 	log.Info().Msg("Starting graceful shutdown")
 
 	// Create shutdown context with timeout
-	_, shutdownCancel := context.WithTimeout(
+	shutdownCtx, shutdownCancel := context.WithTimeout(
 		context.Background(),
 		cfg.Server.ShutdownTimeout,
 	)
 	defer shutdownCancel()
 
-	// TODO (T4): Stop gRPC server
-	// if err := grpcServer.GracefulStop(shutdownCtx); err != nil {
-	//     log.Error().Err(err).Msg("Error during gRPC server shutdown")
-	// }
+	// Stop gRPC server
+	if err := server.Stop(shutdownCtx); err != nil {
+		log.Error().Err(err).Msg("Error during gRPC server shutdown")
+	}
+
+	// Close Kafka producer
+	if err := kafkaProducer.Close(); err != nil {
+		log.Error().Err(err).Msg("Error closing Kafka producer")
+	}
+	log.Info().Msg("Kafka producer closed")
+
+	// Close Redis connection
+	if err := redisClient.Close(); err != nil {
+		log.Error().Err(err).Msg("Error closing Redis connection")
+	}
+	log.Info().Msg("Redis connection closed")
 
 	// Close database connections
 	dbPool.Close()
