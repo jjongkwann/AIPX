@@ -1,0 +1,185 @@
+# ML Inference Service - Test Makefile
+
+.PHONY: help install-test test test-unit test-integration test-performance test-validation test-monitoring coverage benchmark clean
+
+help:  ## Show this help message
+	@echo "Available targets:"
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
+
+install-test:  ## Install test dependencies
+	pip install -r requirements-test.txt
+
+test:  ## Run all tests
+	pytest
+
+test-unit:  ## Run unit tests only (fast)
+	pytest -m unit -v
+
+test-integration:  ## Run integration tests
+	pytest -m integration -v
+
+test-performance:  ## Run performance tests
+	pytest -m performance -v
+
+test-validation:  ## Run validation tests
+	pytest -m validation -v
+
+test-monitoring:  ## Run monitoring tests
+	pytest -m monitoring -v
+
+test-fast:  ## Run only fast tests (exclude slow)
+	pytest -m "not slow" -v
+
+test-parallel:  ## Run tests in parallel
+	pytest -n auto
+
+coverage:  ## Generate coverage report
+	pytest --cov=src --cov-report=html --cov-report=term-missing
+	@echo "Coverage report: htmlcov/index.html"
+
+coverage-xml:  ## Generate XML coverage report (for CI)
+	pytest --cov=src --cov-report=xml
+
+benchmark:  ## Run performance benchmarks
+	pytest -m benchmark --benchmark-only --benchmark-autosave
+
+benchmark-compare:  ## Compare benchmark results
+	pytest-benchmark compare
+
+test-triton:  ## Test Triton client
+	pytest tests/unit/test_triton_client.py -v
+
+test-features:  ## Test feature extraction
+	pytest tests/unit/test_feature_extractor.py -v
+
+test-models:  ## Test LSTM models
+	pytest tests/unit/test_lstm_model.py -v
+
+test-api:  ## Test API endpoints
+	pytest tests/integration/test_api_integration.py -v
+
+test-metrics:  ## Test metrics collection
+	pytest tests/monitoring/test_metrics.py -v
+
+test-health:  ## Test health checks
+	pytest tests/monitoring/test_health.py -v
+
+test-debug:  ## Run tests with debugging
+	pytest -vv --tb=long --pdb-trace
+
+test-failed:  ## Re-run only failed tests
+	pytest --lf -v
+
+test-watch:  ## Watch for changes and re-run tests
+	ptw -- -v
+
+lint:  ## Run code linters
+	black src tests --check
+	isort src tests --check-only
+	flake8 src tests
+	mypy src
+
+format:  ## Format code
+	black src tests
+	isort src tests
+
+clean:  ## Clean test artifacts
+	rm -rf .pytest_cache
+	rm -rf htmlcov
+	rm -rf .coverage
+	rm -rf coverage.xml
+	rm -rf .benchmarks
+	find . -type d -name __pycache__ -exec rm -rf {} +
+	find . -type f -name '*.pyc' -delete
+
+clean-all: clean  ## Clean everything including dependencies
+	rm -rf venv
+	rm -rf *.egg-info
+
+# Docker-based testing
+docker-test:  ## Run tests in Docker
+	docker-compose -f docker-compose.test.yml up --abort-on-container-exit
+
+docker-test-build:  ## Build test Docker image
+	docker-compose -f docker-compose.test.yml build
+
+# CI/CD targets
+ci-test:  ## Run tests for CI pipeline
+	pytest -m "not slow" --cov=src --cov-report=xml --junitxml=junit.xml
+
+ci-integration:  ## Run integration tests for CI
+	pytest -m integration --cov=src --cov-report=xml
+
+ci-performance:  ## Run performance tests for CI
+	pytest -m performance --benchmark-only --benchmark-json=benchmark.json
+
+# Documentation
+test-docs:  ## Generate test documentation
+	pytest --collect-only --quiet | grep "test_" > test_inventory.txt
+	@echo "Test inventory: test_inventory.txt"
+
+# Development helpers
+test-new:  ## Run only tests added in last commit
+	pytest $(shell git diff --name-only HEAD~1 | grep test_)
+
+test-modified:  ## Run tests for modified files
+	pytest $(shell git diff --name-only | grep test_)
+
+test-one:  ## Run a single test (usage: make test-one TEST=path/to/test.py::test_name)
+	pytest $(TEST) -vv
+
+# Detailed test categories
+test-triton-unit:  ## Unit tests for Triton client
+	pytest tests/unit/test_triton_client.py -v
+
+test-features-unit:  ## Unit tests for feature extraction
+	pytest tests/unit/test_feature_extractor.py -v
+
+test-models-unit:  ## Unit tests for models
+	pytest tests/unit/test_lstm_model.py -v
+
+test-schemas-unit:  ## Unit tests for API schemas
+	pytest tests/unit/test_schemas.py -v
+
+test-latency-perf:  ## Performance tests for latency
+	pytest tests/performance/test_latency.py -v
+
+test-throughput-perf:  ## Performance tests for throughput
+	pytest tests/performance/test_throughput.py -v
+
+test-lstm-val:  ## Validation tests for LSTM
+	pytest tests/validation/test_lstm_validation.py -v
+
+test-sentiment-val:  ## Validation tests for sentiment
+	pytest tests/validation/test_sentiment_validation.py -v
+
+test-metrics-mon:  ## Monitoring tests for metrics
+	pytest tests/monitoring/test_metrics.py -v
+
+test-health-mon:  ## Monitoring tests for health
+	pytest tests/monitoring/test_health.py -v
+
+# Report generation
+test-report:  ## Generate HTML test report
+	pytest --html=test_report.html --self-contained-html
+
+test-summary:  ## Show test summary
+	@echo "==== Test Summary ===="
+	@pytest --collect-only -q | tail -1
+	@echo ""
+	@echo "==== Coverage ===="
+	@pytest --cov=src --cov-report=term | tail -5
+
+# Setup and teardown
+setup-test-env:  ## Setup test environment
+	@echo "Setting up test environment..."
+	pip install -r requirements.txt
+	pip install -r requirements-test.txt
+	@echo "Test environment ready!"
+
+verify-test-env:  ## Verify test environment
+	@echo "Verifying test environment..."
+	python -c "import pytest; import torch; import numpy; print('✓ All dependencies installed')"
+	@echo "Running smoke test..."
+	pytest tests/unit/test_schemas.py -v
+	@echo "✓ Test environment verified!"
