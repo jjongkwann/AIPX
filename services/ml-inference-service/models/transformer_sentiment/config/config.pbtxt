@@ -1,0 +1,86 @@
+name: "transformer_sentiment"
+platform: "onnxruntime_onnx"
+max_batch_size: 16
+
+input [
+  {
+    name: "input_ids"
+    data_type: TYPE_INT64
+    dims: [512]
+  },
+  {
+    name: "attention_mask"
+    data_type: TYPE_INT64
+    dims: [512]
+  }
+]
+
+output [
+  {
+    name: "sentiment"
+    data_type: TYPE_FP32
+    dims: [1]
+  },
+  {
+    name: "confidence"
+    data_type: TYPE_FP32
+    dims: [1]
+  }
+]
+
+dynamic_batching {
+  preferred_batch_size: [1, 4, 8, 16]
+  max_queue_delay_microseconds: 200
+}
+
+instance_group [
+  {
+    count: 1
+    kind: KIND_GPU
+    gpus: [0]
+  }
+]
+
+instance_group [
+  {
+    count: 2
+    kind: KIND_CPU
+  }
+]
+
+optimization {
+  execution_accelerators {
+    gpu_execution_accelerator [
+      {
+        name: "tensorrt"
+        parameters {
+          key: "precision_mode"
+          value: "FP16"
+        }
+      }
+    ]
+  }
+}
+
+model_warmup [
+  {
+    name: "warmup_sample"
+    batch_size: 1
+    inputs {
+      key: "input_ids"
+      value: {
+        data_type: TYPE_INT64
+        dims: [512]
+        zero_data: true
+      }
+    }
+    inputs {
+      key: "attention_mask"
+      value: {
+        data_type: TYPE_INT64
+        dims: [512]
+        zero_data: true
+      }
+    }
+  }
+]

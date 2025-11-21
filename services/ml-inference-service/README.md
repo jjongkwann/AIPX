@@ -1,35 +1,110 @@
-# ML 추론 서비스 (ML Inference Service)
+# ML Inference Service
 
-**ML Inference Service**는 딥러닝 모델을 프로덕션 환경에서 고성능으로 서빙하기 위한 인프라입니다. **NVIDIA Triton Inference Server**를 기반으로 구축되었습니다.
+Real-time ML model inference service using NVIDIA Triton Inference Server for AIPX trading system.
 
-## 🛠 주요 기능 (Features)
+## Overview
 
-### 1. 고성능 모델 서빙
--   **다중 프레임워크 지원**: PyTorch, TensorFlow, ONNX 등 다양한 포맷의 모델을 단일 서버에서 서빙합니다.
--   **TensorRT 최적화**: NVIDIA GPU에 최적화된 TensorRT 엔진을 사용하여 추론 속도를 극대화합니다.
+The ML Inference Service provides AI-powered market predictions by serving:
+- **LSTM Price Predictor**: Next-tick price prediction using LSTM neural networks
+- **Transformer Sentiment Analyzer**: News sentiment analysis using transformer models
+- **Ensemble Predictor**: Combined predictions leveraging both models
 
-### 2. 동적 배칭 (Dynamic Batching)
--   **요청 병합**: 짧은 시간 내에 들어오는 개별 추론 요청들을 서버 내부에서 하나의 배치(Batch)로 묶어 처리합니다.
--   **처리량(Throughput) 향상**: 개별 요청의 응답 속도를 크게 해치지 않으면서 전체 처리량을 비약적으로 높입니다.
+## Architecture
 
-### 3. 앙상블 파이프라인 (Ensemble Pipeline)
--   **전처리/후처리 통합**: 데이터 전처리(Python), 모델 추론(TensorRT), 후처리(Python) 단계를 하나의 파이프라인으로 구성하여 네트워크 오버헤드를 줄입니다.
-
-## 📂 모델 저장소 구조 (Model Repository)
 ```
-model_repository/
-└── price_prediction_lstm/
-    ├── config.pbtxt      # 모델 설정 (입출력, 배치 크기 등)
-    └── 1/
-        └── model.pt      # 학습된 모델 파일
+┌─────────────────────────────────────────────────────────────┐
+│                    ML Inference Service                      │
+├─────────────────────────────────────────────────────────────┤
+│                                                               │
+│  ┌──────────────┐         ┌─────────────────────────┐       │
+│  │   FastAPI    │◄────────┤  Strategy Services      │       │
+│  │   Gateway    │         └─────────────────────────┘       │
+│  └──────┬───────┘                                            │
+│         │                                                     │
+│         ▼                                                     │
+│  ┌──────────────────────────────────────────────────┐       │
+│  │        NVIDIA Triton Inference Server            │       │
+│  ├──────────────────────────────────────────────────┤       │
+│  │  ┌────────────┐  ┌─────────────┐  ┌───────────┐ │       │
+│  │  │   LSTM     │  │ Transformer │  │ Ensemble  │ │       │
+│  │  │   Model    │  │   Sentiment │  │  Combiner │ │       │
+│  │  └────────────┘  └─────────────┘  └───────────┘ │       │
+│  └──────────────────────────────────────────────────┘       │
+│                                                               │
+│  ┌──────────────────────────────────────────────────┐       │
+│  │         Feature Engineering Pipeline             │       │
+│  └──────────────────────────────────────────────────┘       │
+│                                                               │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-## 🚀 시작하기 (Getting Started)
+## Features
 
-### Docker 실행
+### 1. LSTM Price Prediction
+- Input: 60 timesteps of OHLCV data
+- Output: Next tick price prediction
+- Features:
+  - Attention mechanism for interpretability
+  - Batch processing support
+  - Dynamic batching for optimal throughput
+  - GPU acceleration
+
+### 2. Sentiment Analysis
+- Input: News text (up to 512 tokens)
+- Output: Sentiment score (-1 to +1) and confidence
+- Features:
+  - Transformer-based architecture
+  - ONNX runtime optimization
+  - TensorRT acceleration
+  - Multi-language support
+
+### 3. Ensemble Predictions
+- Combines price and sentiment signals
+- Weighted averaging with confidence scores
+- Triton ensemble pipeline
+- Single inference call
+
+### 4. Feature Engineering
+- Automated feature extraction from OHLCV data
+- Technical indicators (RSI, MA, volatility)
+- Real-time normalization
+- Batch preprocessing
+
+### 5. Model Monitoring
+- Inference latency tracking (p50, p95, p99)
+- Error rate monitoring
+- Model drift detection
+- Performance alerts
+- Prometheus metrics export
+
+## Quick Start
+
+### Prerequisites
+- Docker with NVIDIA GPU support
+- NVIDIA Driver >= 525.60.13
+- CUDA >= 12.0
+- Python 3.11+
+
+### Installation
+
+1. Clone repository:
 ```bash
-docker run --gpus all --rm -p 8000:8000 -p 8001:8001 -p 8002:8002 \
-  -v $(pwd)/model_repository:/models \
-  nvcr.io/nvidia/tritonserver:23.10-py3 \
-  tritonserver --model-repository=/models
+git clone <repository-url>
+cd services/ml-inference-service
+```
+
+2. Set up environment:
+```bash
+cp .env.example .env
+# Edit .env with your configuration
+```
+
+3. Start services:
+```bash
+docker-compose up -d
+```
+
+4. Verify health:
+```bash
+curl http://localhost:8005/health
 ```

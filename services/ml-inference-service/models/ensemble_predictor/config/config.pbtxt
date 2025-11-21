@@ -1,0 +1,113 @@
+name: "ensemble_predictor"
+platform: "ensemble"
+max_batch_size: 16
+
+input [
+  {
+    name: "price_features"
+    data_type: TYPE_FP32
+    dims: [60, 5]
+  },
+  {
+    name: "news_text_ids"
+    data_type: TYPE_INT64
+    dims: [512]
+  },
+  {
+    name: "attention_mask"
+    data_type: TYPE_INT64
+    dims: [512]
+  }
+]
+
+output [
+  {
+    name: "final_prediction"
+    data_type: TYPE_FP32
+    dims: [1]
+  },
+  {
+    name: "price_component"
+    data_type: TYPE_FP32
+    dims: [1]
+  },
+  {
+    name: "sentiment_component"
+    data_type: TYPE_FP32
+    dims: [1]
+  },
+  {
+    name: "confidence"
+    data_type: TYPE_FP32
+    dims: [1]
+  }
+]
+
+ensemble_scheduling {
+  step [
+    {
+      model_name: "lstm_price_predictor"
+      model_version: -1
+      input_map {
+        key: "input__0"
+        value: "price_features"
+      }
+      output_map {
+        key: "output__0"
+        value: "lstm_output"
+      }
+    },
+    {
+      model_name: "transformer_sentiment"
+      model_version: -1
+      input_map {
+        key: "input_ids"
+        value: "news_text_ids"
+      }
+      input_map {
+        key: "attention_mask"
+        value: "attention_mask"
+      }
+      output_map {
+        key: "sentiment"
+        value: "sentiment_output"
+      }
+      output_map {
+        key: "confidence"
+        value: "sentiment_confidence"
+      }
+    },
+    {
+      model_name: "ensemble_combiner"
+      model_version: -1
+      input_map {
+        key: "price_pred"
+        value: "lstm_output"
+      }
+      input_map {
+        key: "sentiment"
+        value: "sentiment_output"
+      }
+      input_map {
+        key: "sentiment_conf"
+        value: "sentiment_confidence"
+      }
+      output_map {
+        key: "final_pred"
+        value: "final_prediction"
+      }
+      output_map {
+        key: "price_comp"
+        value: "price_component"
+      }
+      output_map {
+        key: "sentiment_comp"
+        value: "sentiment_component"
+      }
+      output_map {
+        key: "confidence"
+        value: "confidence"
+      }
+    }
+  ]
+}
