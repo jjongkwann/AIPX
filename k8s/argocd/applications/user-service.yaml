@@ -1,0 +1,25 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: user-service
+  namespace: argocd
+  annotations:
+    notifications.argoproj.io/subscribe.on-sync-succeeded.slack: aipx-deployments
+spec:
+  project: aipx
+
+  source:
+    repoURL: https://github.com/your-org/aipx
+    targetRevision: main
+    path: k8s/services/user-service
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: aipx
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+    - CreateNamespace=true

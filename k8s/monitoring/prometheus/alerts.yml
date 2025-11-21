@@ -1,0 +1,190 @@
+groups:
+- name: aipx_application_alerts
+  interval: 30s
+  rules:
+  # High error rate
+  - alert: HighErrorRate
+    expr: |
+      (
+        sum(rate(http_requests_total{status=~"5.."}[5m])) by (service)
+        /
+        sum(rate(http_requests_total[5m])) by (service)
+      ) > 0.05
+    for: 5m
+    labels:
+      severity: warning
+      team: backend
+    annotations:
+      summary: "High error rate for {{ $labels.service }}"
+      description: "Service {{ $labels.service }} has error rate above 5% (current: {{ $value | humanizePercentage }})"
+
+  # High latency
+  - alert: HighLatency
+    expr: |
+      histogram_quantile(0.95,
+        sum(rate(http_request_duration_seconds_bucket[5m])) by (service, le)
+      ) > 1.0
+    for: 5m
+    labels:
+      severity: warning
+      team: backend
+    annotations:
+      summary: "High latency for {{ $labels.service }}"
+      description: "Service {{ $labels.service }} has p95 latency above 1s (current: {{ $value }}s)"
+
+  # Service down
+  - alert: ServiceDown
+    expr: up{job=~"oms|user-service|cognitive-service"} == 0
+    for: 2m
+    labels:
+      severity: critical
+      team: backend
+    annotations:
+      summary: "Service {{ $labels.job }} is down"
+      description: "Service {{ $labels.job }} has been down for more than 2 minutes"
+
+  # High CPU usage
+  - alert: HighCPUUsage
+    expr: |
+      (
+        sum(rate(container_cpu_usage_seconds_total{namespace="aipx"}[5m])) by (pod)
+        /
+        sum(container_spec_cpu_quota{namespace="aipx"}/container_spec_cpu_period{namespace="aipx"}) by (pod)
+      ) > 0.8
+    for: 10m
+    labels:
+      severity: warning
+      team: infrastructure
+    annotations:
+      summary: "High CPU usage for {{ $labels.pod }}"
+      description: "Pod {{ $labels.pod }} has CPU usage above 80% for 10 minutes"
+
+  # High memory usage
+  - alert: HighMemoryUsage
+    expr: |
+      (
+        sum(container_memory_working_set_bytes{namespace="aipx"}) by (pod)
+        /
+        sum(container_spec_memory_limit_bytes{namespace="aipx"}) by (pod)
+      ) > 0.9
+    for: 5m
+    labels:
+      severity: warning
+      team: infrastructure
+    annotations:
+      summary: "High memory usage for {{ $labels.pod }}"
+      description: "Pod {{ $labels.pod }} has memory usage above 90%"
+
+  # Pod restart
+  - alert: PodRestarting
+    expr: rate(kube_pod_container_status_restarts_total{namespace="aipx"}[15m]) > 0
+    for: 5m
+    labels:
+      severity: warning
+      team: infrastructure
+    annotations:
+      summary: "Pod {{ $labels.pod }} is restarting"
+      description: "Pod {{ $labels.pod }} has restarted {{ $value }} times in the last 15 minutes"
+
+- name: aipx_business_alerts
+  interval: 60s
+  rules:
+  # Order processing failure rate
+  - alert: HighOrderFailureRate
+    expr: |
+      (
+        sum(rate(orders_total{status="failed"}[10m]))
+        /
+        sum(rate(orders_total[10m]))
+      ) > 0.1
+    for: 5m
+    labels:
+      severity: critical
+      team: trading
+    annotations:
+      summary: "High order failure rate"
+      description: "Order failure rate is above 10% (current: {{ $value | humanizePercentage }})"
+
+  # Low order throughput
+  - alert: LowOrderThroughput
+    expr: sum(rate(orders_total[5m])) < 1
+    for: 10m
+    labels:
+      severity: warning
+      team: trading
+    annotations:
+      summary: "Low order throughput"
+      description: "Order throughput is below 1 order/sec (current: {{ $value }})"
+
+  # Strategy execution lag
+  - alert: StrategyExecutionLag
+    expr: kafka_consumer_lag{topic="strategy-signals"} > 1000
+    for: 5m
+    labels:
+      severity: warning
+      team: trading
+    annotations:
+      summary: "High strategy execution lag"
+      description: "Strategy worker has consumer lag above 1000 messages"
+
+- name: aipx_infrastructure_alerts
+  interval: 60s
+  rules:
+  # Kafka lag
+  - alert: KafkaConsumerLag
+    expr: kafka_consumer_lag > 5000
+    for: 5m
+    labels:
+      severity: warning
+      team: infrastructure
+    annotations:
+      summary: "Kafka consumer lag for {{ $labels.topic }}"
+      description: "Consumer group {{ $labels.group }} has lag of {{ $value }} on topic {{ $labels.topic }}"
+
+  # PostgreSQL connections
+  - alert: PostgreSQLHighConnections
+    expr: |
+      (
+        sum(pg_stat_database_numbackends{datname="aipx"})
+        /
+        pg_settings_max_connections
+      ) > 0.8
+    for: 5m
+    labels:
+      severity: warning
+      team: infrastructure
+    annotations:
+      summary: "PostgreSQL connection usage above 80%"
+      description: "PostgreSQL has {{ $value | humanizePercentage }} of max connections in use"
+
+  # Redis memory
+  - alert: RedisHighMemory
+    expr: |
+      (
+        redis_memory_used_bytes
+        /
+        redis_memory_max_bytes
+      ) > 0.9
+    for: 5m
+    labels:
+      severity: warning
+      team: infrastructure
+    annotations:
+      summary: "Redis memory usage above 90%"
+      description: "Redis has {{ $value | humanizePercentage }} memory usage"
+
+  # Disk space
+  - alert: DiskSpaceLow
+    expr: |
+      (
+        node_filesystem_avail_bytes{mountpoint="/"}
+        /
+        node_filesystem_size_bytes{mountpoint="/"}
+      ) < 0.1
+    for: 5m
+    labels:
+      severity: critical
+      team: infrastructure
+    annotations:
+      summary: "Disk space low on {{ $labels.instance }}"
+      description: "Disk space is below 10% on {{ $labels.instance }}"

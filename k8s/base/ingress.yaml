@@ -1,0 +1,77 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: aipx-ingress
+  namespace: aipx
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/rate-limit: "100"
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+    nginx.ingress.kubernetes.io/cors-allow-origin: "*"
+    nginx.ingress.kubernetes.io/enable-cors: "true"
+spec:
+  ingressClassName: nginx
+  tls:
+  - hosts:
+    - api.aipx.io
+    - dashboard.aipx.io
+    secretName: aipx-tls
+  rules:
+  - host: api.aipx.io
+    http:
+      paths:
+      - path: /api/v1/users
+        pathType: Prefix
+        backend:
+          service:
+            name: user-service
+            port:
+              number: 8082
+      - path: /api/v1/cognitive
+        pathType: Prefix
+        backend:
+          service:
+            name: cognitive-service
+            port:
+              number: 8001
+      - path: /api/v1/backtests
+        pathType: Prefix
+        backend:
+          service:
+            name: backtesting
+            port:
+              number: 8002
+      - path: /api/v1/ml
+        pathType: Prefix
+        backend:
+          service:
+            name: ml-inference
+            port:
+              number: 8005
+  - host: dashboard.aipx.io
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: dashboard
+            port:
+              number: 3000
+---
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt-prod
+spec:
+  acme:
+    server: https://acme-v02.api.letsencrypt.org/directory
+    email: devops@aipx.io
+    privateKeySecretRef:
+      name: letsencrypt-prod
+    solvers:
+    - http01:
+        ingress:
+          class: nginx

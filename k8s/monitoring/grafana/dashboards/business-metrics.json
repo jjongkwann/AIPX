@@ -1,0 +1,105 @@
+{
+  "dashboard": {
+    "title": "AIPX Business Metrics",
+    "tags": ["aipx", "business", "trading"],
+    "timezone": "browser",
+    "panels": [
+      {
+        "title": "Orders Per Second",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+        "targets": [
+          {
+            "expr": "sum(rate(orders_total{namespace=\"aipx\"}[5m]))",
+            "legendFormat": "Total"
+          },
+          {
+            "expr": "sum(rate(orders_total{namespace=\"aipx\", status=\"executed\"}[5m]))",
+            "legendFormat": "Executed"
+          },
+          {
+            "expr": "sum(rate(orders_total{namespace=\"aipx\", status=\"failed\"}[5m]))",
+            "legendFormat": "Failed"
+          }
+        ]
+      },
+      {
+        "title": "Order Success Rate",
+        "type": "gauge",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+        "targets": [
+          {
+            "expr": "sum(rate(orders_total{namespace=\"aipx\", status=\"executed\"}[5m])) / sum(rate(orders_total{namespace=\"aipx\"}[5m]))"
+          }
+        ]
+      },
+      {
+        "title": "Active Strategies",
+        "type": "stat",
+        "gridPos": {"h": 4, "w": 6, "x": 0, "y": 8},
+        "targets": [
+          {
+            "expr": "count(strategy_active{namespace=\"aipx\"})"
+          }
+        ]
+      },
+      {
+        "title": "Total P&L (24h)",
+        "type": "stat",
+        "gridPos": {"h": 4, "w": 6, "x": 6, "y": 8},
+        "targets": [
+          {
+            "expr": "sum(increase(pnl_total{namespace=\"aipx\"}[24h]))"
+          }
+        ]
+      },
+      {
+        "title": "Strategy Win Rate",
+        "type": "gauge",
+        "gridPos": {"h": 4, "w": 6, "x": 12, "y": 8},
+        "targets": [
+          {
+            "expr": "sum(winning_trades_total) / sum(trades_total)"
+          }
+        ]
+      },
+      {
+        "title": "Average Trade Duration",
+        "type": "stat",
+        "gridPos": {"h": 4, "w": 6, "x": 18, "y": 8},
+        "targets": [
+          {
+            "expr": "avg(trade_duration_seconds)"
+          }
+        ]
+      },
+      {
+        "title": "Trades by Strategy",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 12},
+        "targets": [
+          {
+            "expr": "sum(rate(trades_total{namespace=\"aipx\"}[5m])) by (strategy)",
+            "legendFormat": "{{strategy}}"
+          }
+        ]
+      },
+      {
+        "title": "P&L by Strategy",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 12},
+        "targets": [
+          {
+            "expr": "sum(rate(pnl_total{namespace=\"aipx\"}[5m])) by (strategy)",
+            "legendFormat": "{{strategy}}"
+          }
+        ]
+      }
+    ],
+    "refresh": "30s",
+    "time": {
+      "from": "now-24h",
+      "to": "now"
+    }
+  }
+}

@@ -1,0 +1,26 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: aipx
+  labels:
+    name: aipx
+    environment: production
+    monitoring: enabled
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: aipx-staging
+  labels:
+    name: aipx-staging
+    environment: staging
+    monitoring: enabled
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: aipx-dev
+  labels:
+    name: aipx-dev
+    environment: development
+    monitoring: enabled

@@ -1,0 +1,12 @@
+# Ignore unnecessary files
+.git
+.gitignore
+*.md
+.env*
+*.log
+tmp/
+test/
+*.test
+coverage.out
+vendor/
+.DS_Store

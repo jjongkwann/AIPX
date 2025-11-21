@@ -1,0 +1,41 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: oms
+  namespace: aipx
+  labels:
+    app: oms
+    tier: application
+spec:
+  type: ClusterIP
+  selector:
+    app: oms
+  ports:
+  - name: grpc
+    port: 50051
+    targetPort: 50051
+    protocol: TCP
+  - name: metrics
+    port: 9090
+    targetPort: 9090
+    protocol: TCP
+  sessionAffinity: None
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: oms-headless
+  namespace: aipx
+  labels:
+    app: oms
+    tier: application
+spec:
+  type: ClusterIP
+  clusterIP: None
+  selector:
+    app: oms
+  ports:
+  - name: grpc
+    port: 50051
+    targetPort: 50051
+    protocol: TCP

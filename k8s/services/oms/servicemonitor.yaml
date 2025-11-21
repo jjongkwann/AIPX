@@ -1,0 +1,17 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: oms
+  namespace: aipx
+  labels:
+    app: oms
+    monitoring: enabled
+spec:
+  selector:
+    matchLabels:
+      app: oms
+  endpoints:
+  - port: metrics
+    interval: 30s
+    path: /metrics
+    scheme: http

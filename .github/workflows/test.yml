@@ -1,0 +1,195 @@
+name: Test
+
+on:
+  pull_request:
+    branches: [main, develop]
+  push:
+    branches: [develop]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  detect-changes:
+    name: Detect Changes
+    runs-on: ubuntu-latest
+    outputs:
+      go-services: ${{ steps.filter.outputs.go-services }}
+      python-services: ${{ steps.filter.outputs.python-services }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v2
+        id: filter
+        with:
+          filters: |
+            go-services:
+              - 'services/data-ingestion-service/**'
+              - 'services/data-recorder-service/**'
+              - 'services/order-management-service/**'
+              - 'services/user-service/**'
+              - 'services/notification-service/**'
+            python-services:
+              - 'services/cognitive-service/**'
+              - 'services/strategy-worker/**'
+              - 'services/backtesting-service/**'
+              - 'services/ml-inference-service/**'
+            frontend:
+              - 'services/dashboard-service/**'
+
+  test-go-services:
+    name: Test Go Services
+    needs: detect-changes
+    if: needs.detect-changes.outputs.go-services == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service:
+          - data-ingestion-service
+          - data-recorder-service
+          - order-management-service
+          - user-service
+          - notification-service
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.22'
+          cache-dependency-path: services/${{ matrix.service }}/go.sum
+
+      - name: Install dependencies
+        working-directory: services/${{ matrix.service }}
+        run: |
+          go mod download
+          go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+
+      - name: Run linter
+        working-directory: services/${{ matrix.service }}
+        run: golangci-lint run --timeout=5m
+
+      - name: Run tests
+        working-directory: services/${{ matrix.service }}
+        run: |
+          go test -v -race -coverprofile=coverage.out -covermode=atomic ./...
+
+      - name: Upload coverage
+        uses: codecov/codecov-action@v3
+        with:
+          file: services/${{ matrix.service }}/coverage.out
+          flags: ${{ matrix.service }}
+
+  test-python-services:
+    name: Test Python Services
+    needs: detect-changes
+    if: needs.detect-changes.outputs.python-services == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service:
+          - cognitive-service
+          - strategy-worker
+          - backtesting-service
+          - ml-inference-service
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: services/${{ matrix.service }}/pyproject.toml
+
+      - name: Install dependencies
+        working-directory: services/${{ matrix.service }}
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .[dev]
+
+      - name: Run linter
+        working-directory: services/${{ matrix.service }}
+        run: |
+          ruff check .
+          black --check .
+          mypy src/
+
+      - name: Run tests
+        working-directory: services/${{ matrix.service }}
+        run: |
+          pytest tests/ -v --cov=src --cov-report=xml
+
+      - name: Upload coverage
+        uses: codecov/codecov-action@v3
+        with:
+          file: services/${{ matrix.service }}/coverage.xml
+          flags: ${{ matrix.service }}
+
+  test-frontend:
+    name: Test Frontend
+    needs: detect-changes
+    if: needs.detect-changes.outputs.frontend == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: services/dashboard-service/package-lock.json
+
+      - name: Install dependencies
+        working-directory: services/dashboard-service
+        run: npm ci
+
+      - name: Run linter
+        working-directory: services/dashboard-service
+        run: npm run lint
+
+      - name: Run tests
+        working-directory: services/dashboard-service
+        run: npm test -- --coverage
+
+      - name: Build
+        working-directory: services/dashboard-service
+        run: npm run build
+
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+
+      - name: Upload Trivy results to GitHub Security
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_file: 'trivy-results.sarif'
+
+  all-tests-passed:
+    name: All Tests Passed
+    needs: [test-go-services, test-python-services, test-frontend, security-scan]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check test results
+        run: |
+          if [[ "${{ needs.test-go-services.result }}" == "failure" ]] || \
+             [[ "${{ needs.test-python-services.result }}" == "failure" ]] || \
+             [[ "${{ needs.test-frontend.result }}" == "failure" ]] || \
+             [[ "${{ needs.security-scan.result }}" == "failure" ]]; then
+            echo "One or more tests failed"
+            exit 1
+          fi
+          echo "All tests passed!"

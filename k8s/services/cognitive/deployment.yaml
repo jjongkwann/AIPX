@@ -1,0 +1,70 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cognitive-service
+  namespace: aipx
+  labels:
+    app: cognitive-service
+    tier: application
+    component: ai
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: cognitive-service
+  template:
+    metadata:
+      labels:
+        app: cognitive-service
+        tier: application
+        version: v1
+        monitoring: enabled
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9093"
+    spec:
+      serviceAccountName: aipx-service-account
+      containers:
+      - name: cognitive-service
+        image: ghcr.io/aipx/cognitive-service:latest
+        imagePullPolicy: Always
+        ports:
+        - name: http
+          containerPort: 8001
+        - name: metrics
+          containerPort: 9093
+        env:
+        - name: ANTHROPIC_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: anthropic-api-key
+              key: api_key
+        - name: POSTGRES_DSN
+          valueFrom:
+            secretKeyRef:
+              name: postgres-credentials
+              key: dsn
+        - name: KAFKA_BROKERS
+          valueFrom:
+            configMapKeyRef:
+              name: aipx-config
+              key: kafka.brokers
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "500m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8001
+          initialDelaySeconds: 15
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8001
+          initialDelaySeconds: 10
+          periodSeconds: 5

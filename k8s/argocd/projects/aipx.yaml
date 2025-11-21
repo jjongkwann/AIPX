@@ -1,0 +1,73 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: aipx
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  description: AIPX Trading Platform
+
+  sourceRepos:
+  - 'https://github.com/your-org/aipx'
+  - 'https://charts.bitnami.com/bitnami'
+  - 'https://prometheus-community.github.io/helm-charts'
+
+  destinations:
+  - namespace: 'aipx'
+    server: https://kubernetes.default.svc
+  - namespace: 'aipx-staging'
+    server: https://kubernetes.default.svc
+  - namespace: 'aipx-dev'
+    server: https://kubernetes.default.svc
+  - namespace: 'monitoring'
+    server: https://kubernetes.default.svc
+
+  clusterResourceWhitelist:
+  - group: ''
+    kind: Namespace
+  - group: rbac.authorization.k8s.io
+    kind: ClusterRole
+  - group: rbac.authorization.k8s.io
+    kind: ClusterRoleBinding
+  - group: networking.k8s.io
+    kind: IngressClass
+  - group: cert-manager.io
+    kind: ClusterIssuer
+
+  namespaceResourceWhitelist:
+  - group: '*'
+    kind: '*'
+
+  roles:
+  - name: admin
+    description: Admin privileges for AIPX project
+    policies:
+    - p, proj:aipx:admin, applications, *, aipx/*, allow
+    groups:
+    - aipx-admins
+
+  - name: developer
+    description: Developer privileges for AIPX project
+    policies:
+    - p, proj:aipx:developer, applications, get, aipx/*, allow
+    - p, proj:aipx:developer, applications, sync, aipx/*, allow
+    groups:
+    - aipx-developers
+
+  - name: readonly
+    description: Read-only access to AIPX project
+    policies:
+    - p, proj:aipx:readonly, applications, get, aipx/*, allow
+    groups:
+    - aipx-readonly
+
+  syncWindows:
+  - kind: deny
+    schedule: '0 0 * * 6,0'
+    duration: 24h
+    applications:
+    - '*-production'
+    namespaces:
+    - aipx
+    manualSync: true

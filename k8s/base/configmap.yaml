@@ -1,0 +1,33 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: aipx-config
+  namespace: aipx
+data:
+  # Kafka Configuration
+  kafka.brokers: "kafka-headless:9092"
+  kafka.consumer.group.id: "aipx-consumer-group"
+
+  # Redis Configuration
+  redis.addr: "redis-master:6379"
+  redis.db: "0"
+
+  # PostgreSQL Configuration
+  postgres.host: "postgresql"
+  postgres.port: "5432"
+  postgres.database: "aipx"
+  postgres.sslmode: "require"
+
+  # Service Discovery
+  oms.grpc.addr: "oms:50051"
+  user.service.url: "http://user-service:8082"
+  cognitive.service.url: "http://cognitive-service:8001"
+  backtesting.service.url: "http://backtesting:8002"
+  ml.inference.service.url: "http://ml-inference:8005"
+
+  # Logging
+  log.level: "info"
+  log.format: "json"
+
+  # Environment
+  environment: "production"
