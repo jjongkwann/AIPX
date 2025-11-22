@@ -47,20 +47,20 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-buildx-
 
-      - name: Build docker-compose services
+      - name: Build docker compose services
         run: |
-          docker-compose build --parallel
+          docker compose build --parallel
         env:
           DOCKER_BUILDKIT: 1
           COMPOSE_DOCKER_CLI_BUILD: 1
 
       - name: Verify services can start
         run: |
-          docker-compose up -d
+          docker compose up -d
           sleep 10
-          docker-compose ps
-          docker-compose logs
-          docker-compose down -v
+          docker compose ps
+          docker compose logs
+          docker compose down -v
 
   security-scan:
     name: Security Scan with Trivy
@@ -248,7 +248,7 @@ jobs:
 
       - name: Build images and report sizes
         run: |
-          docker-compose build
+          docker compose build
           echo "## Docker Image Sizes" > image-sizes.md
           echo "" >> image-sizes.md
           echo "| Image | Size |" >> image-sizes.md

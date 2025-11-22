@@ -175,23 +175,23 @@ jobs:
           KAFKA_BROKER=kafka:9092
           EOF
 
-      - name: Start services with docker-compose
+      - name: Start services with docker compose
         run: |
-          docker-compose up -d
+          docker compose up -d
           sleep 30
 
       - name: Check service health
         run: |
-          docker-compose ps
+          docker compose ps
 
           # Check PostgreSQL
-          docker-compose exec -T postgres pg_isready || echo "Postgres not ready"
+          docker compose exec -T postgres pg_isready || echo "Postgres not ready"
 
           # Check Redis
-          docker-compose exec -T redis redis-cli ping || echo "Redis not ready"
+          docker compose exec -T redis redis-cli ping || echo "Redis not ready"
 
           # Show logs
-          docker-compose logs
+          docker compose logs
 
       - name: Run E2E tests
         run: |
@@ -203,8 +203,8 @@ jobs:
         if: always()
         run: |
           mkdir -p logs
-          docker-compose logs > logs/docker-compose.log
-          docker-compose ps > logs/docker-compose-ps.log
+          docker compose logs > logs/docker-compose.log
+          docker compose ps > logs/docker-compose-ps.log
 
       - name: Upload service logs
         if: always()
@@ -217,8 +217,8 @@ jobs:
       - name: Cleanup
         if: always()
         run: |
-          docker-compose down -v
-          docker-compose rm -f
+          docker compose down -v
+          docker compose rm -f
 
   performance-test:
     name: Performance Tests
