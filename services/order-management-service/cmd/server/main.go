@@ -13,13 +13,13 @@ import (
 	"github.com/redis/go-redis/v9"
 	"github.com/rs/zerolog/log"
 
-	"github.com/jjongkwann/aipx/services/order-management-service/internal/broker"
-	"github.com/jjongkwann/aipx/services/order-management-service/internal/config"
-	grpcServer "github.com/jjongkwann/aipx/services/order-management-service/internal/grpc"
-	"github.com/jjongkwann/aipx/services/order-management-service/internal/ratelimit"
-	"github.com/jjongkwann/aipx/services/order-management-service/internal/repository"
-	"github.com/jjongkwann/aipx/services/order-management-service/internal/risk"
-	sharedLogger "github.com/jjongkwann/aipx/shared/go/pkg/logger"
+	"order-management-service/internal/broker"
+	"order-management-service/internal/config"
+	grpcServer "order-management-service/internal/grpc"
+	"order-management-service/internal/ratelimit"
+	"order-management-service/internal/repository"
+	"order-management-service/internal/risk"
+	sharedLogger "shared/pkg/logger"
 )
 
 func main() {

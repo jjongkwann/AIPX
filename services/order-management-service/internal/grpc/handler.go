@@ -10,11 +10,11 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	pb "github.com/jjongkwann/aipx/shared/go/pkg/pb"
-	"github.com/jjongkwann/aipx/services/order-management-service/internal/broker"
-	"github.com/jjongkwann/aipx/services/order-management-service/internal/ratelimit"
-	"github.com/jjongkwann/aipx/services/order-management-service/internal/repository"
-	"github.com/jjongkwann/aipx/services/order-management-service/internal/risk"
+	pb "shared/pkg/pb"
+	"order-management-service/internal/broker"
+	"order-management-service/internal/ratelimit"
+	"order-management-service/internal/repository"
+	"order-management-service/internal/risk"
 )
 
 // OrderServiceHandler implements the OrderService gRPC service

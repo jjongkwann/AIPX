@@ -11,7 +11,7 @@ import (
 	"google.golang.org/grpc/keepalive"
 	"google.golang.org/grpc/reflection"
 
-	pb "github.com/jjongkwann/aipx/shared/go/pkg/pb"
+	pb "shared/pkg/pb"
 )
 
 // Server represents the gRPC server

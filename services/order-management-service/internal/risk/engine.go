@@ -7,7 +7,7 @@ import (
 
 	"github.com/rs/zerolog/log"
 
-	"github.com/jjongkwann/aipx/services/order-management-service/internal/repository"
+	"order-management-service/internal/repository"
 )
 
 // RiskRule defines the interface that all risk rules must implement

@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jjongkwann/aipx/services/order-management-service/internal/repository"
-	"github.com/jjongkwann/aipx/services/order-management-service/internal/testutil"
+	"order-management-service/internal/repository"
+	"order-management-service/internal/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -215,8 +215,8 @@ func TestDuplicateOrderRule(t *testing.T) {
 		err := rule.Validate(ctx, order)
 		assert.NoError(t, err)
 
-		// Wait for window to expire
-		time.Sleep(1100 * time.Millisecond)
+		// Fast forward time
+		redis.Server.FastForward(2 * time.Second)
 
 		// Second order should be allowed
 		err = rule.Validate(ctx, order)
@@ -229,6 +229,7 @@ func TestDuplicateOrderRule(t *testing.T) {
 
 		order1 := testutil.CreateTestOrder()
 		order2 := testutil.CreateTestOrder()
+		order2.Symbol = "035720" // Different symbol
 
 		err := rule.Validate(ctx, order1)
 		assert.NoError(t, err)

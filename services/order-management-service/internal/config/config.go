@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	sharedConfig "github.com/jjongkwann/aipx/shared/go/pkg/config"
+	sharedConfig "shared/pkg/config"
 )
 
 // Config holds the configuration for the Order Management Service

@@ -7,8 +7,8 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/jjongkwann/aipx/services/order-management-service/internal/repository"
-	"github.com/jjongkwann/aipx/services/order-management-service/internal/testutil"
+	"order-management-service/internal/repository"
+	"order-management-service/internal/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

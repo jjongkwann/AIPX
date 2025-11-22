@@ -4,7 +4,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/jjongkwann/aipx/services/order-management-service/internal/repository"
+	"order-management-service/internal/repository"
 )
 
 // CreateTestOrder creates a sample order for testing

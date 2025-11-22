@@ -50,21 +50,21 @@ const (
 
 // Order represents a trading order
 type Order struct {
-	ID             string       `json:"id"`
-	UserID         string       `json:"user_id"`
-	StrategyID     *string      `json:"strategy_id,omitempty"`
-	Symbol         string       `json:"symbol"`
-	Side           OrderSide    `json:"side"`
-	OrderType      OrderType    `json:"order_type"`
-	Price          *float64     `json:"price,omitempty"`
-	Quantity       int          `json:"quantity"`
-	Status         OrderStatus  `json:"status"`
-	BrokerOrderID  *string      `json:"broker_order_id,omitempty"`
-	FilledPrice    *float64     `json:"filled_price,omitempty"`
-	FilledQuantity *int         `json:"filled_quantity,omitempty"`
-	RejectReason   *string      `json:"reject_reason,omitempty"`
-	CreatedAt      time.Time    `json:"created_at"`
-	UpdatedAt      time.Time    `json:"updated_at"`
+	ID             string      `json:"id"`
+	UserID         string      `json:"user_id"`
+	StrategyID     *string     `json:"strategy_id,omitempty"`
+	Symbol         string      `json:"symbol"`
+	Side           OrderSide   `json:"side"`
+	OrderType      OrderType   `json:"order_type"`
+	Price          *float64    `json:"price,omitempty"`
+	Quantity       int         `json:"quantity"`
+	Status         OrderStatus `json:"status"`
+	BrokerOrderID  *string     `json:"broker_order_id,omitempty"`
+	FilledPrice    *float64    `json:"filled_price,omitempty"`
+	FilledQuantity *int        `json:"filled_quantity,omitempty"`
+	RejectReason   *string     `json:"reject_reason,omitempty"`
+	CreatedAt      time.Time   `json:"created_at"`
+	UpdatedAt      time.Time   `json:"updated_at"`
 }
 
 // OrderAuditLog represents an audit log entry for an order
@@ -228,7 +228,7 @@ func (r *postgresOrderRepository) UpdateOrderExecution(ctx context.Context, id s
 		    filled_price = $2,
 		    filled_quantity = $3,
 		    status = CASE
-		        WHEN filled_quantity >= quantity THEN 'FILLED'
+		        WHEN $3 >= quantity THEN 'FILLED'
 		        ELSE status
 		    END,
 		    updated_at = NOW()

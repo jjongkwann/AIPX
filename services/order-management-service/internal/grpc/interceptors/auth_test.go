@@ -172,7 +172,8 @@ func TestValidateToken_ExpiredToken(t *testing.T) {
 	st, ok := status.FromError(err)
 	assert.True(t, ok)
 	assert.Equal(t, codes.Unauthenticated, st.Code())
-	assert.Contains(t, st.Message(), "token expired")
+	assert.Contains(t, st.Message(), "invalid token")
+	assert.Contains(t, st.Message(), "expired")
 }
 
 func TestValidateToken_NotYetValid(t *testing.T) {
@@ -193,7 +194,8 @@ func TestValidateToken_NotYetValid(t *testing.T) {
 	st, ok := status.FromError(err)
 	assert.True(t, ok)
 	assert.Equal(t, codes.Unauthenticated, st.Code())
-	assert.Contains(t, st.Message(), "token not yet valid")
+	assert.Contains(t, st.Message(), "invalid token")
+	assert.Contains(t, st.Message(), "not valid yet")
 }
 
 func TestValidateToken_FutureIssuedToken(t *testing.T) {

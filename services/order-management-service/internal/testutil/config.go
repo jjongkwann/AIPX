@@ -3,8 +3,8 @@ package testutil
 import (
 	"time"
 
-	"github.com/jjongkwann/aipx/services/order-management-service/internal/broker"
-	"github.com/jjongkwann/aipx/services/order-management-service/internal/ratelimit"
+	"order-management-service/internal/broker"
+	"order-management-service/internal/ratelimit"
 )
 
 // NewTestRateLimitConfig creates a test rate limiter configuration

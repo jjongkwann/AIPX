@@ -8,7 +8,7 @@ import (
 	"github.com/IBM/sarama"
 	"github.com/rs/zerolog/log"
 
-	"github.com/jjongkwann/aipx/services/order-management-service/internal/repository"
+	"order-management-service/internal/repository"
 )
 
 // OrderExecutor orchestrates the order lifecycle

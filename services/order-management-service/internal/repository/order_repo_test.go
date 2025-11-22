@@ -1,11 +1,12 @@
-package repository
+package repository_test
 
 import (
 	"context"
 	"testing"
 	"time"
 
-	"github.com/jjongkwann/aipx/services/order-management-service/internal/testutil"
+	"order-management-service/internal/repository"
+	"order-management-service/internal/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -14,7 +15,7 @@ func TestRepository_CreateOrder(t *testing.T) {
 	pgContainer := testutil.NewTestDB(t)
 	defer pgContainer.Close(t)
 
-	repo := NewPostgresOrderRepository(pgContainer.Pool)
+	repo := repository.NewPostgresOrderRepository(pgContainer.Pool)
 	ctx := context.Background()
 
 	t.Run("Success", func(t *testing.T) {
@@ -42,7 +43,7 @@ func TestRepository_GetOrder(t *testing.T) {
 	pgContainer := testutil.NewTestDB(t)
 	defer pgContainer.Close(t)
 
-	repo := NewPostgresOrderRepository(pgContainer.Pool)
+	repo := repository.NewPostgresOrderRepository(pgContainer.Pool)
 	ctx := context.Background()
 
 	t.Run("Success", func(t *testing.T) {
@@ -62,9 +63,9 @@ func TestRepository_GetOrder(t *testing.T) {
 	})
 
 	t.Run("Not found", func(t *testing.T) {
-		retrieved, err := repo.GetOrder(ctx, "non-existent-id")
+		retrieved, err := repo.GetOrder(ctx, "00000000-0000-0000-0000-000000000000")
 		assert.Error(t, err)
-		assert.Equal(t, ErrOrderNotFound, err)
+		assert.Equal(t, repository.ErrOrderNotFound, err)
 		assert.Nil(t, retrieved)
 	})
 }
@@ -73,7 +74,7 @@ func TestRepository_GetUserOrders(t *testing.T) {
 	pgContainer := testutil.NewTestDB(t)
 	defer pgContainer.Close(t)
 
-	repo := NewPostgresOrderRepository(pgContainer.Pool)
+	repo := repository.NewPostgresOrderRepository(pgContainer.Pool)
 	ctx := context.Background()
 
 	t.Run("Returns user orders", func(t *testing.T) {
@@ -124,7 +125,7 @@ func TestRepository_UpdateOrderStatus(t *testing.T) {
 	pgContainer := testutil.NewTestDB(t)
 	defer pgContainer.Close(t)
 
-	repo := NewPostgresOrderRepository(pgContainer.Pool)
+	repo := repository.NewPostgresOrderRepository(pgContainer.Pool)
 	ctx := context.Background()
 
 	t.Run("Success", func(t *testing.T) {
@@ -132,18 +133,18 @@ func TestRepository_UpdateOrderStatus(t *testing.T) {
 		err := repo.CreateOrder(ctx, order)
 		require.NoError(t, err)
 
-		err = repo.UpdateOrderStatus(ctx, order.ID, OrderStatusSent, "Order sent to broker")
+		err = repo.UpdateOrderStatus(ctx, order.ID, repository.OrderStatusSent, "Order sent to broker")
 		require.NoError(t, err)
 
 		retrieved, err := repo.GetOrder(ctx, order.ID)
 		require.NoError(t, err)
-		assert.Equal(t, OrderStatusSent, retrieved.Status)
+		assert.Equal(t, repository.OrderStatusSent, retrieved.Status)
 	})
 
 	t.Run("Not found", func(t *testing.T) {
-		err := repo.UpdateOrderStatus(ctx, "non-existent-id", OrderStatusSent, "")
+		err := repo.UpdateOrderStatus(ctx, "00000000-0000-0000-0000-000000000000", repository.OrderStatusSent, "")
 		assert.Error(t, err)
-		assert.Equal(t, ErrOrderNotFound, err)
+		assert.Equal(t, repository.ErrOrderNotFound, err)
 	})
 
 	t.Run("Updates reject reason", func(t *testing.T) {
@@ -152,12 +153,12 @@ func TestRepository_UpdateOrderStatus(t *testing.T) {
 		require.NoError(t, err)
 
 		reason := "Insufficient funds"
-		err = repo.UpdateOrderStatus(ctx, order.ID, OrderStatusRejected, reason)
+		err = repo.UpdateOrderStatus(ctx, order.ID, repository.OrderStatusRejected, reason)
 		require.NoError(t, err)
 
 		retrieved, err := repo.GetOrder(ctx, order.ID)
 		require.NoError(t, err)
-		assert.Equal(t, OrderStatusRejected, retrieved.Status)
+		assert.Equal(t, repository.OrderStatusRejected, retrieved.Status)
 		require.NotNil(t, retrieved.RejectReason)
 		assert.Equal(t, reason, *retrieved.RejectReason)
 	})
@@ -167,7 +168,7 @@ func TestRepository_UpdateOrderExecution(t *testing.T) {
 	pgContainer := testutil.NewTestDB(t)
 	defer pgContainer.Close(t)
 
-	repo := NewPostgresOrderRepository(pgContainer.Pool)
+	repo := repository.NewPostgresOrderRepository(pgContainer.Pool)
 	ctx := context.Background()
 
 	t.Run("Success", func(t *testing.T) {
@@ -203,7 +204,7 @@ func TestRepository_UpdateOrderExecution(t *testing.T) {
 
 		retrieved, err := repo.GetOrder(ctx, order.ID)
 		require.NoError(t, err)
-		assert.Equal(t, OrderStatusFilled, retrieved.Status)
+		assert.Equal(t, repository.OrderStatusFilled, retrieved.Status)
 	})
 }
 
@@ -211,7 +212,7 @@ func TestRepository_GetOrdersByStatus(t *testing.T) {
 	pgContainer := testutil.NewTestDB(t)
 	defer pgContainer.Close(t)
 
-	repo := NewPostgresOrderRepository(pgContainer.Pool)
+	repo := repository.NewPostgresOrderRepository(pgContainer.Pool)
 	ctx := context.Background()
 
 	t.Run("Returns orders with status", func(t *testing.T) {
@@ -221,15 +222,15 @@ func TestRepository_GetOrdersByStatus(t *testing.T) {
 
 		sentOrder := testutil.CreateTestOrder()
 		repo.CreateOrder(ctx, sentOrder)
-		repo.UpdateOrderStatus(ctx, sentOrder.ID, OrderStatusSent, "")
+		repo.UpdateOrderStatus(ctx, sentOrder.ID, repository.OrderStatusSent, "")
 
 		// Query pending orders
-		pendingOrders, err := repo.GetOrdersByStatus(ctx, OrderStatusPending, 10)
+		pendingOrders, err := repo.GetOrdersByStatus(ctx, repository.OrderStatusPending, 10)
 		require.NoError(t, err)
 		assert.GreaterOrEqual(t, len(pendingOrders), 1)
 
 		// Query sent orders
-		sentOrders, err := repo.GetOrdersByStatus(ctx, OrderStatusSent, 10)
+		sentOrders, err := repo.GetOrdersByStatus(ctx, repository.OrderStatusSent, 10)
 		require.NoError(t, err)
 		assert.GreaterOrEqual(t, len(sentOrders), 1)
 	})
@@ -239,7 +240,7 @@ func TestRepository_CancelOrder(t *testing.T) {
 	pgContainer := testutil.NewTestDB(t)
 	defer pgContainer.Close(t)
 
-	repo := NewPostgresOrderRepository(pgContainer.Pool)
+	repo := repository.NewPostgresOrderRepository(pgContainer.Pool)
 	ctx := context.Background()
 
 	t.Run("Success", func(t *testing.T) {
@@ -253,7 +254,7 @@ func TestRepository_CancelOrder(t *testing.T) {
 
 		retrieved, err := repo.GetOrder(ctx, order.ID)
 		require.NoError(t, err)
-		assert.Equal(t, OrderStatusCancelled, retrieved.Status)
+		assert.Equal(t, repository.OrderStatusCancelled, retrieved.Status)
 		require.NotNil(t, retrieved.RejectReason)
 		assert.Equal(t, reason, *retrieved.RejectReason)
 	})
@@ -263,7 +264,7 @@ func TestRepository_GetPendingOrdersForUser(t *testing.T) {
 	pgContainer := testutil.NewTestDB(t)
 	defer pgContainer.Close(t)
 
-	repo := NewPostgresOrderRepository(pgContainer.Pool)
+	repo := repository.NewPostgresOrderRepository(pgContainer.Pool)
 	ctx := context.Background()
 
 	t.Run("Returns pending and sent orders", func(t *testing.T) {
@@ -278,13 +279,13 @@ func TestRepository_GetPendingOrdersForUser(t *testing.T) {
 		sentOrder := testutil.CreateTestOrder()
 		sentOrder.UserID = userID
 		repo.CreateOrder(ctx, sentOrder)
-		repo.UpdateOrderStatus(ctx, sentOrder.ID, OrderStatusSent, "")
+		repo.UpdateOrderStatus(ctx, sentOrder.ID, repository.OrderStatusSent, "")
 
 		// Create filled order (should not be returned)
 		filledOrder := testutil.CreateTestOrder()
 		filledOrder.UserID = userID
 		repo.CreateOrder(ctx, filledOrder)
-		repo.UpdateOrderStatus(ctx, filledOrder.ID, OrderStatusFilled, "")
+		repo.UpdateOrderStatus(ctx, filledOrder.ID, repository.OrderStatusFilled, "")
 
 		orders, err := repo.GetPendingOrdersForUser(ctx, userID)
 		require.NoError(t, err)
@@ -292,7 +293,7 @@ func TestRepository_GetPendingOrdersForUser(t *testing.T) {
 
 		// Verify only pending/sent orders
 		for _, order := range orders {
-			assert.Contains(t, []OrderStatus{OrderStatusPending, OrderStatusSent}, order.Status)
+			assert.Contains(t, []repository.OrderStatus{repository.OrderStatusPending, repository.OrderStatusSent}, order.Status)
 		}
 	})
 }
@@ -301,7 +302,7 @@ func TestRepository_Concurrency(t *testing.T) {
 	pgContainer := testutil.NewTestDB(t)
 	defer pgContainer.Close(t)
 
-	repo := NewPostgresOrderRepository(pgContainer.Pool)
+	repo := repository.NewPostgresOrderRepository(pgContainer.Pool)
 	ctx := context.Background()
 
 	t.Run("Concurrent creates", func(t *testing.T) {

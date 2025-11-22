@@ -42,9 +42,9 @@ type Config struct {
 // OrderRequest represents a KIS order request
 type OrderRequest struct {
 	Symbol   string  `json:"symbol"`
-	Side     string  `json:"side"`      // "BUY" or "SELL"
-	Type     string  `json:"type"`      // "LIMIT" or "MARKET"
-	Price    float64 `json:"price"`     // 0 for market orders
+	Side     string  `json:"side"`  // "BUY" or "SELL"
+	Type     string  `json:"type"`  // "LIMIT" or "MARKET"
+	Price    float64 `json:"price"` // 0 for market orders
 	Quantity int     `json:"quantity"`
 }
 
@@ -85,7 +85,7 @@ func NewKISClient(config *Config) (*KISClient, error) {
 
 	// Create circuit breaker
 	breakerSettings := gobreaker.Settings{
-		Name:        "KIS-API",
+		Name:        fmt.Sprintf("KIS-API-%d", time.Now().UnixNano()),
 		MaxRequests: 3,
 		Interval:    time.Minute,
 		Timeout:     30 * time.Second,
@@ -164,12 +164,12 @@ func (c *KISClient) submitOrderInternal(ctx context.Context, req *OrderRequest) 
 
 	// Build request payload (KIS-specific format)
 	payload := map[string]interface{}{
-		"CANO":       c.accountNo[:8],        // 계좌번호 앞 8자리
-		"ACNT_PRDT_CD": c.accountNo[8:],     // 계좌번호 뒤 2자리
-		"PDNO":       req.Symbol,             // 종목코드
-		"ORD_DVSN":   kisOrderType,           // 주문구분
-		"ORD_QTY":    fmt.Sprintf("%d", req.Quantity), // 주문수량
-		"ORD_UNPR":   fmt.Sprintf("%.0f", req.Price),  // 주문단가
+		"CANO":         c.accountNo[:8],                 // 계좌번호 앞 8자리
+		"ACNT_PRDT_CD": c.accountNo[8:],                 // 계좌번호 뒤 2자리
+		"PDNO":         req.Symbol,                      // 종목코드
+		"ORD_DVSN":     kisOrderType,                    // 주문구분
+		"ORD_QTY":      fmt.Sprintf("%d", req.Quantity), // 주문수량
+		"ORD_UNPR":     fmt.Sprintf("%.0f", req.Price),  // 주문단가
 	}
 
 	jsonPayload, err := json.Marshal(payload)
@@ -223,8 +223,8 @@ func (c *KISClient) submitOrderInternal(ctx context.Context, req *OrderRequest) 
 		MsgCode string `json:"msg_cd"`
 		Msg1    string `json:"msg1"`
 		Output  struct {
-			OrderNo    string `json:"ODNO"` // 주문번호
-			OrderTime  string `json:"ORD_TMD"` // 주문시각
+			OrderNo   string `json:"ODNO"`    // 주문번호
+			OrderTime string `json:"ORD_TMD"` // 주문시각
 		} `json:"output"`
 	}
 
@@ -259,11 +259,11 @@ func (c *KISClient) CancelOrder(ctx context.Context, orderID string) (*OrderResp
 	url := c.baseURL + endpoint
 
 	payload := map[string]interface{}{
-		"CANO":        c.accountNo[:8],
-		"ACNT_PRDT_CD": c.accountNo[8:],
-		"ORGN_ODNO":   orderID, // 원주문번호
-		"RVSE_CNCL_DVSN_CD": "02", // 취소구분 (02=취소)
-		"ORD_QTY":     "0",
+		"CANO":              c.accountNo[:8],
+		"ACNT_PRDT_CD":      c.accountNo[8:],
+		"ORGN_ODNO":         orderID, // 원주문번호
+		"RVSE_CNCL_DVSN_CD": "02",    // 취소구분 (02=취소)
+		"ORD_QTY":           "0",
 	}
 
 	jsonPayload, err := json.Marshal(payload)
