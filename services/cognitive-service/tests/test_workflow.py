@@ -104,7 +104,26 @@ class TestWorkflowManager:
     @pytest.mark.asyncio
     async def test_workflow_manager_execute(self, workflow_manager, mock_llm_service):
         """Test workflow manager execute method."""
-        mock_llm_service.invoke_structured.return_value = MagicMock(next_agent="end", reason="Test", is_complete=True)
+        # Use side_effect to return proper structured objects for each call
+        # First call: user_profile agent extracts profile
+        # Second call: supervisor decides to end
+        from src.agents.user_profile_agent import ExtractedProfile
+        from src.agents.supervisor import SupervisorDecision
+
+        profile_response = ExtractedProfile(
+            risk_tolerance="moderate",
+            capital=100000,
+            investment_horizon="long",
+            confidence=0.9,
+            missing_fields=[],
+        )
+        supervisor_response = SupervisorDecision(
+            next_agent="end",
+            reason="Profile complete",
+            is_complete=True,
+        )
+
+        mock_llm_service.invoke_structured.side_effect = [profile_response, supervisor_response]
 
         initial_state: ConversationState = {
             "messages": [HumanMessage(content="Test")],
