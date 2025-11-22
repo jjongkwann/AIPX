@@ -1,6 +1,6 @@
 module order-management-service
 
-go 1.24
+go 1.24.0
 
 require (
 	github.com/IBM/sarama v1.46.3
@@ -8,13 +8,13 @@ require (
 	github.com/golang-jwt/jwt/v5 v5.3.0
 	github.com/google/uuid v1.6.0
 	github.com/jackc/pgx/v5 v5.7.2
-	shared v0.0.0
 	github.com/redis/go-redis/v9 v9.17.0
 	github.com/rs/zerolog v1.34.0
 	github.com/sony/gobreaker v1.0.0
 	github.com/stretchr/testify v1.11.1
 	github.com/testcontainers/testcontainers-go v0.26.0
 	google.golang.org/grpc v1.77.0
+	shared v0.0.0
 )
 
 require (

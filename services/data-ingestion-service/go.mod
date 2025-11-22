@@ -1,11 +1,11 @@
 module data-ingestion-service
 
-go 1.24
+go 1.24.0
 
 require (
 	github.com/gorilla/websocket v1.5.1
-	shared v0.0.0
 	github.com/rs/zerolog v1.34.0
+	shared v0.0.0
 )
 
 require (

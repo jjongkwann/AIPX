@@ -207,7 +207,7 @@ jobs:
           IMAGE_NAME_LOWER=$(echo "${{ env.IMAGE_NAME }}" | tr '[:upper:]' '[:lower:]')
           if [ "${{ matrix.base }}" == "go-base" ]; then
             cat > Dockerfile.go-base <<EOF
-          FROM golang:1.22-alpine AS builder
+          FROM golang:1.24-alpine AS builder
           RUN apk add --no-cache git make protobuf-dev
           WORKDIR /app
           COPY shared/go/go.mod shared/go/go.sum ./
