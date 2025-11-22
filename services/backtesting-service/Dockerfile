@@ -13,7 +13,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements
-COPY pyproject.toml setup.py ./
+COPY pyproject.toml ./
 COPY src/ ./src/
 
 # Install dependencies
