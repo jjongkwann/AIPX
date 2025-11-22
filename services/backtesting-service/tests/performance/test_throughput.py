@@ -138,6 +138,7 @@ class TestThroughputBenchmarks:
         from src.engine.matching_engine import Order, OrderSide, OrderType
 
         orders = []
+        base_time = datetime(2024, 1, 1, 9, 0, 0)
         for i in range(1000):
             order = Order(
                 symbol='005930',
@@ -145,7 +146,7 @@ class TestThroughputBenchmarks:
                 quantity=10,
                 order_type=OrderType.MARKET,
                 price=71000,
-                timestamp=datetime(2024, 1, 1, 9, 0, i)
+                timestamp=base_time + timedelta(seconds=i)
             )
             orders.append(order)
 
@@ -173,6 +174,7 @@ class TestThroughputBenchmarks:
 
         # Execute many trades
         num_trades = 1000
+        base_time = datetime(2024, 1, 1, 9, 0, 0)
         start_time = time.time()
 
         for i in range(num_trades):
@@ -182,7 +184,7 @@ class TestThroughputBenchmarks:
                     symbol='005930',
                     quantity=10,
                     price=70000 + (i % 100),
-                    timestamp=datetime(2024, 1, 1, 9, 0, i)
+                    timestamp=base_time + timedelta(seconds=i)
                 )
             else:
                 # Sell (if we have position)
@@ -191,7 +193,7 @@ class TestThroughputBenchmarks:
                         symbol='005930',
                         quantity=10,
                         price=71000 + (i % 100),
-                        timestamp=datetime(2024, 1, 1, 9, 0, i)
+                        timestamp=base_time + timedelta(seconds=i)
                     )
 
         end_time = time.time()

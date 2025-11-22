@@ -153,6 +153,7 @@ class TestEventLoop:
 
         loop.register_handler(EventType.MARKET_DATA, handler)
         loop.register_handler(EventType.ORDER, handler)
+        loop.register_handler(EventType.SIGNAL, handler)
 
         # Add events in random order
         event2 = Event(

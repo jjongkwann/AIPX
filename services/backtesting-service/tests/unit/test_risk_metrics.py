@@ -237,19 +237,25 @@ class TestRiskMetrics:
         """Test beta with inversely correlated returns"""
         np.random.seed(42)
 
-        # Generate equity curve with inverse market returns
+        # Generate market returns
         market_returns = np.random.randn(99) * 0.01
-        portfolio_returns = -market_returns  # Inverse
+        # Portfolio returns are inverse of market
+        portfolio_returns = -market_returns
 
-        equity_values = 10000000 * np.exp(np.cumsum(portfolio_returns))
+        # Build equity curve: start with initial value, then apply cumulative returns
+        initial_equity = 10000000
+        equity_values = [initial_equity]
+        for r in portfolio_returns:
+            equity_values.append(equity_values[-1] * (1 + r))
 
         equity_curve = []
-        for i in range(100):
+        for i, equity in enumerate(equity_values):
             equity_curve.append({
                 'timestamp': datetime(2024, 1, 1) + timedelta(days=i),
-                'equity': equity_values[i]
+                'equity': equity
             })
 
+        # Now equity_curve has 100 points, portfolio returns (from diff) will be 99
         beta = RiskMetrics.calculate_beta(equity_curve, market_returns)
 
         # Beta should be negative (inverse correlation)
