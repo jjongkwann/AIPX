@@ -2,19 +2,14 @@
 import pytest
 import numpy as np
 from unittest.mock import Mock, AsyncMock, patch
-import sys
-from pathlib import Path
 
-# Add src to path
-sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
-
-from triton_client import TritonClient
+from src.triton_client import TritonClient
 
 
 @pytest.fixture
 def mock_triton_client():
     """Mock Triton gRPC client."""
-    with patch('triton_client.aiogrpcclient.InferenceServerClient') as mock:
+    with patch('tritonclient.grpc.aio.InferenceServerClient') as mock:
         client = Mock()
         client.is_server_live = AsyncMock(return_value=True)
         client.is_server_ready = AsyncMock(return_value=True)

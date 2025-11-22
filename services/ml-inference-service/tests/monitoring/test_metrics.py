@@ -50,10 +50,11 @@ class TestInferenceMetrics:
         """Test percentile calculations."""
         metrics = InferenceMetrics()
         metrics.inference_times = list(range(1, 101))  # 1 to 100
-        
-        assert metrics.p50_inference_time_ms == 50
-        assert metrics.p95_inference_time_ms == 95
-        assert metrics.p99_inference_time_ms == 99
+
+        # np.percentile uses linear interpolation by default
+        assert 49 <= metrics.p50_inference_time_ms <= 51
+        assert 94 <= metrics.p95_inference_time_ms <= 96
+        assert 98 <= metrics.p99_inference_time_ms <= 100
     
     def test_percentiles_empty_list(self):
         """Test percentiles with empty list."""

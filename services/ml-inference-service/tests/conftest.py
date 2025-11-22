@@ -5,14 +5,22 @@ import pandas as pd
 import torch
 from datetime import datetime, timedelta
 from unittest.mock import Mock, AsyncMock
-from httpx import AsyncClient
+from httpx import AsyncClient, ASGITransport
 import asyncio
 from typing import AsyncGenerator
 
 # Import application components
 import sys
 import os
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
+
+# Set required environment variables for testing before importing Settings
+os.environ.setdefault("DB_PASSWORD", "test_password")
+os.environ.setdefault("TRITON_URL", "localhost:8001")
+
+# Add project root to path so 'src' can be imported as a package
+project_root = os.path.dirname(os.path.dirname(__file__))
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
 
 from src.config import Settings
 
@@ -146,10 +154,10 @@ def mock_triton_client(mocker):
         }
     
     async def mock_analyze_sentiment(input_ids, attention_mask, model_version=None):
-        # Return random sentiment
+        # Return positive sentiment for deterministic testing
         return {
-            "sentiment": np.random.uniform(-1, 1),
-            "confidence": np.random.uniform(0.7, 0.95),
+            "sentiment": 0.75,
+            "confidence": 0.85,
             "model_name": "transformer_sentiment",
             "model_version": model_version or "1"
         }
@@ -217,10 +225,11 @@ async def test_client(mock_triton_client, mocker):
     """Provide test HTTP client for FastAPI."""
     # Patch triton_client in main module
     mocker.patch('src.main.triton_client', mock_triton_client)
-    
+
     from src.main import app
-    
-    async with AsyncClient(app=app, base_url="http://test") as client:
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
         yield client
 
 
