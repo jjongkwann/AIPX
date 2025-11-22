@@ -1,4 +1,4 @@
-module github.com/jjongkwann/aipx/services/order-management-service
+module order-management-service
 
 go 1.24.0
 
@@ -8,7 +8,7 @@ require (
 	github.com/golang-jwt/jwt/v5 v5.3.0
 	github.com/google/uuid v1.6.0
 	github.com/jackc/pgx/v5 v5.7.2
-	github.com/jjongkwann/aipx/shared/go v0.0.0
+	shared v0.0.0
 	github.com/redis/go-redis/v9 v9.17.0
 	github.com/rs/zerolog v1.34.0
 	github.com/sony/gobreaker v1.0.0
@@ -86,4 +86,4 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
-replace github.com/jjongkwann/aipx/shared/go => ../../shared/go
+replace shared => ../../shared/go

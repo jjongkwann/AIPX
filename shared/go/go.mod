@@ -1,4 +1,4 @@
-module github.com/jjongkwann/aipx/shared/go
+module shared
 
 go 1.24.0
 

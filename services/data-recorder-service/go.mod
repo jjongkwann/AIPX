@@ -1,4 +1,4 @@
-module github.com/jjongkwann/aipx/services/data-recorder-service
+module data-recorder-service
 
 go 1.22
 

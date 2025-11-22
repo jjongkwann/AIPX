@@ -1,10 +1,10 @@
-module github.com/AIPX/services/notification-service
+module notification-service
 
 go 1.24.0
 
 require (
 	github.com/jackc/pgx/v5 v5.5.1
-	github.com/jjongkwann/aipx/shared/go v0.0.0
+	shared v0.0.0
 	github.com/stretchr/testify v1.11.1
 )
 
@@ -44,4 +44,4 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
-replace github.com/jjongkwann/aipx/shared/go => ../../shared/go
+replace shared => ../../shared/go

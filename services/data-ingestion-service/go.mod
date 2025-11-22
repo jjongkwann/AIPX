@@ -1,10 +1,10 @@
-module github.com/jjongkwann/aipx/services/data-ingestion-service
+module data-ingestion-service
 
 go 1.24.0
 
 require (
 	github.com/gorilla/websocket v1.5.1
-	github.com/jjongkwann/aipx/shared/go v0.0.0
+	shared v0.0.0
 	github.com/rs/zerolog v1.34.0
 )
 
@@ -38,4 +38,4 @@ require (
 	google.golang.org/protobuf v1.36.10 // indirect
 )
 
-replace github.com/jjongkwann/aipx/shared/go => ../../shared/go
+replace shared => ../../shared/go
