@@ -1,4 +1,6 @@
 /** @type {import('next').NextConfig} */
+const apiBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000'
+
 const nextConfig = {
   reactStrictMode: true,
   swcMinify: true,
@@ -8,7 +10,7 @@ const nextConfig = {
     return [
       {
         source: '/api/v1/:path*',
-        destination: process.env.NEXT_PUBLIC_API_BASE + '/api/v1/:path*',
+        destination: `${apiBase}/api/v1/:path*`,
       },
     ]
   },
