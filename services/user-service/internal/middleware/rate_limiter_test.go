@@ -16,7 +16,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func setupTestRedis(t *testing.T) (*miniredis.Miniredis, *redis.Client) {
+func setupTestRedis(t testing.TB) (*miniredis.Miniredis, *redis.Client) {
 	mr, err := miniredis.Run()
 	require.NoError(t, err)
 
@@ -32,7 +32,7 @@ func TestNewRateLimiter(t *testing.T) {
 	defer client.Close()
 
 	rl := NewRateLimiter(client, 10, time.Minute)
-	
+
 	assert.NotNil(t, rl)
 	assert.Equal(t, 10, rl.limit)
 	assert.Equal(t, time.Minute, rl.window)
@@ -45,7 +45,7 @@ func TestRateLimiterMiddleware_AllowsRequestsWithinLimit(t *testing.T) {
 	defer client.Close()
 
 	rl := NewRateLimiter(client, 5, time.Second)
-	
+
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("OK"))
@@ -60,9 +60,9 @@ func TestRateLimiterMiddleware_AllowsRequestsWithinLimit(t *testing.T) {
 		rec := httptest.NewRecorder()
 
 		middleware.ServeHTTP(rec, req)
-		
+
 		assert.Equal(t, http.StatusOK, rec.Code)
-		
+
 		// Check headers
 		assert.Equal(t, "5", rec.Header().Get("X-RateLimit-Limit"))
 		remaining, _ := strconv.Atoi(rec.Header().Get("X-RateLimit-Remaining"))
@@ -76,7 +76,7 @@ func TestRateLimiterMiddleware_BlocksExcessRequests(t *testing.T) {
 	defer client.Close()
 
 	rl := NewRateLimiter(client, 3, time.Second)
-	
+
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})
@@ -90,7 +90,7 @@ func TestRateLimiterMiddleware_BlocksExcessRequests(t *testing.T) {
 		rec := httptest.NewRecorder()
 
 		middleware.ServeHTTP(rec, req)
-		
+
 		if i < 3 {
 			assert.Equal(t, http.StatusOK, rec.Code)
 		} else {
@@ -105,8 +105,9 @@ func TestRateLimiterMiddleware_ResetsAfterWindow(t *testing.T) {
 	defer mr.Close()
 	defer client.Close()
 
-	rl := NewRateLimiter(client, 2, 100*time.Millisecond)
-	
+	// Use 2 second window for reliable TTL expiration
+	rl := NewRateLimiter(client, 2, 2*time.Second)
+
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})
@@ -129,10 +130,10 @@ func TestRateLimiterMiddleware_ResetsAfterWindow(t *testing.T) {
 	middleware.ServeHTTP(rec, req)
 	assert.Equal(t, http.StatusTooManyRequests, rec.Code)
 
-	// Wait for window to expire
-	time.Sleep(150 * time.Millisecond)
+	// Use miniredis FastForward to expire the key
+	mr.FastForward(3 * time.Second)
 
-	// Should be allowed again
+	// Should be allowed again after TTL expires
 	req = httptest.NewRequest("GET", "/test", nil)
 	req.RemoteAddr = "10.0.0.1:1234"
 	rec = httptest.NewRecorder()
@@ -146,7 +147,7 @@ func TestRateLimiterMiddleware_DifferentIPsSeparateLimits(t *testing.T) {
 	defer client.Close()
 
 	rl := NewRateLimiter(client, 2, time.Second)
-	
+
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})
@@ -155,7 +156,7 @@ func TestRateLimiterMiddleware_DifferentIPsSeparateLimits(t *testing.T) {
 
 	// Different IPs should have separate limits
 	ips := []string{"1.1.1.1:1234", "2.2.2.2:1234", "3.3.3.3:1234"}
-	
+
 	for _, ip := range ips {
 		for i := 0; i < 2; i++ {
 			req := httptest.NewRequest("GET", "/test", nil)
@@ -169,10 +170,10 @@ func TestRateLimiterMiddleware_DifferentIPsSeparateLimits(t *testing.T) {
 
 func TestGetClientIP(t *testing.T) {
 	testCases := []struct {
-		name     string
-		headers  map[string]string
+		name       string
+		headers    map[string]string
 		remoteAddr string
-		expected string
+		expected   string
 	}{
 		{
 			name:       "Direct IP",
@@ -222,7 +223,7 @@ func TestGetClientIP(t *testing.T) {
 			for k, v := range tc.headers {
 				req.Header.Set(k, v)
 			}
-			
+
 			ip := getClientIP(req)
 			assert.Equal(t, tc.expected, ip)
 		})
@@ -302,7 +303,7 @@ func TestAuthRateLimiter_Middleware(t *testing.T) {
 	defer client.Close()
 
 	al := NewAuthRateLimiter(client)
-	
+
 	// Mock handler that returns different status codes
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		authHeader := r.Header.Get("X-Auth-Status")
@@ -401,7 +402,7 @@ func TestAuthRateLimiter_LocalFallback(t *testing.T) {
 
 func TestAuthRateLimiter_CleanupExpired(t *testing.T) {
 	al := NewAuthRateLimiter(nil)
-	
+
 	// Add some state
 	al.localState["old-user"] = &authState{
 		lastAttempt: time.Now().Add(-25 * time.Hour),
@@ -434,7 +435,7 @@ func TestRateLimiter_ConcurrentRequests(t *testing.T) {
 	defer client.Close()
 
 	rl := NewRateLimiter(client, 10, time.Second)
-	
+
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})
@@ -450,13 +451,13 @@ func TestRateLimiter_ConcurrentRequests(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			
+
 			req := httptest.NewRequest("GET", "/test", nil)
 			req.RemoteAddr = "concurrent.test:1234"
 			rec := httptest.NewRecorder()
-			
+
 			middleware.ServeHTTP(rec, req)
-			
+
 			mu.Lock()
 			if rec.Code == http.StatusOK {
 				successCount++
@@ -466,7 +467,7 @@ func TestRateLimiter_ConcurrentRequests(t *testing.T) {
 	}
 
 	wg.Wait()
-	
+
 	// Exactly 10 requests should succeed
 	assert.Equal(t, 10, successCount)
 }
@@ -492,7 +493,7 @@ func TestResponseWriter(t *testing.T) {
 		ResponseWriter: httptest.NewRecorder(),
 		statusCode:     http.StatusOK,
 	}
-	
+
 	n, err := wrapped2.Write([]byte("test"))
 	assert.NoError(t, err)
 	assert.Equal(t, 4, n)
