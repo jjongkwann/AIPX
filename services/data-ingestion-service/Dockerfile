@@ -11,7 +11,6 @@ WORKDIR /build
 
 # Copy go mod files
 COPY go.mod go.sum ./
-COPY ../../shared/go ./shared/go
 
 # Download dependencies
 RUN go mod download

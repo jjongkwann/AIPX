@@ -10,9 +10,6 @@ WORKDIR /build
 COPY go.mod go.sum ./
 RUN go mod download
 
-# Copy shared packages
-COPY ../../shared/go /shared/go
-
 # Copy source code
 COPY . .
 

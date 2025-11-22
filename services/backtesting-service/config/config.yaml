@@ -1,0 +1,73 @@
+database:
+  host: "localhost"
+  port: 5432
+  database: "aipx"
+  user: "postgres"
+  password: "${DB_PASSWORD}"
+  min_pool_size: 5
+  max_pool_size: 20
+  command_timeout: 60
+  ssl_mode: "prefer"
+
+redis:
+  host: "localhost"
+  port: 6379
+  db: 1
+  password: "${REDIS_PASSWORD}"
+  max_connections: 50
+  socket_timeout: 5
+  key_prefix: "backtest:"
+
+backtesting:
+  # Default parameters
+  default_initial_capital: 10000000  # 1000만원
+  default_commission_rate: 0.0003    # 0.03%
+  default_tax_rate: 0.0023           # 0.23% (Korean stock tax)
+
+  # Execution limits
+  max_concurrent_sessions: 10
+  max_symbols_per_session: 50
+  max_duration_days: 365
+  session_timeout: 3600              # 1 hour max per session
+
+  # Data settings
+  tick_data_batch_size: 10000
+  equity_curve_sample_interval: 300  # 5 minutes
+
+  # Worker settings
+  worker_threads: 4
+  queue_size: 100
+
+metrics:
+  # Risk-free rate for Sharpe ratio calculation
+  risk_free_rate: 0.035              # 3.5% annual
+
+  # Confidence levels
+  var_confidence: 0.95
+  cvar_confidence: 0.95
+
+  # Trading days per year (KRX)
+  trading_days_per_year: 252
+
+logging:
+  level: "INFO"
+  format: "json"
+  output: "stdout"
+  file:
+    enabled: false
+    path: "/var/log/backtesting-service/app.log"
+    max_bytes: 10485760
+    backup_count: 5
+
+monitoring:
+  enabled: true
+  prometheus_port: 9095
+  health_check_port: 8002
+
+service:
+  name: "backtesting-service"
+  environment: "${ENVIRONMENT:development}"
+  host: "0.0.0.0"
+  port: 8002
+  shutdown_timeout: 30
+  graceful_shutdown: true
