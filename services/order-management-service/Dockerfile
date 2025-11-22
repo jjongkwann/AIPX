@@ -6,14 +6,22 @@ WORKDIR /app
 # Install dependencies
 RUN apk add --no-cache git ca-certificates
 
-# Copy go mod files
-COPY go.mod go.sum ./
+# Copy shared module first
+COPY shared/go ./shared/go
+
+# Copy service go mod files
+COPY services/order-management-service/go.mod services/order-management-service/go.sum ./services/order-management-service/
+
+# Download dependencies
+WORKDIR /app/services/order-management-service
 RUN go mod download
 
-# Copy source
-COPY . .
+# Copy service source
+WORKDIR /app
+COPY services/order-management-service ./services/order-management-service
 
 # Build binary
+WORKDIR /app/services/order-management-service
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
     -ldflags="-w -s" \
     -o /app/bin/server \
@@ -30,8 +38,8 @@ WORKDIR /app
 COPY --from=builder /app/bin/server .
 
 # Copy config and migrations
-COPY --from=builder /app/config ./config
-COPY --from=builder /app/migrations ./migrations
+COPY --from=builder /app/services/order-management-service/config ./config
+COPY --from=builder /app/services/order-management-service/migrations ./migrations
 
 # Non-root user
 RUN addgroup -g 1000 app && \

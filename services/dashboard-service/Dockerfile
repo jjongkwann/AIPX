@@ -6,10 +6,10 @@ RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
 # Copy package files
-COPY package.json package-lock.json* ./
+COPY services/dashboard-service/package.json services/dashboard-service/package-lock.json* ./
 
-# Install dependencies
-RUN npm ci --only=production
+# Install all dependencies (including devDependencies for build)
+RUN npm ci
 
 # Stage 2: Builder
 FROM node:20-alpine AS builder
@@ -19,7 +19,7 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 
 # Copy source code
-COPY . .
+COPY services/dashboard-service/ .
 
 # Build application
 ENV NEXT_TELEMETRY_DISABLED 1

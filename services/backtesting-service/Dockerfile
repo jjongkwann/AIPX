@@ -13,8 +13,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements
-COPY pyproject.toml ./
-COPY src/ ./src/
+COPY services/backtesting-service/pyproject.toml ./
+COPY services/backtesting-service/src/ ./src/
 
 # Install dependencies
 RUN pip install --no-cache-dir --user .
@@ -34,9 +34,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY --from=builder /root/.local /root/.local
 
 # Copy application
-COPY src/ ./src/
-COPY migrations/ ./migrations/
-COPY config/ ./config/
+COPY services/backtesting-service/src/ ./src/
+COPY services/backtesting-service/migrations/ ./migrations/
+COPY services/backtesting-service/config/ ./config/
 
 # Non-root user
 RUN useradd -m -u 1000 app && chown -R app:app /app

@@ -15,7 +15,7 @@ RUN apt-get update && apt-get install -y \
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 
 # Copy dependency files
-COPY pyproject.toml ./
+COPY services/cognitive-service/pyproject.toml ./
 
 # Install dependencies
 RUN uv pip install --system -r pyproject.toml
@@ -36,8 +36,8 @@ COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/pytho
 COPY --from=builder /usr/local/bin /usr/local/bin
 
 # Copy application code
-COPY src/ ./src/
-COPY migrations/ ./migrations/
+COPY services/cognitive-service/src/ ./src/
+COPY services/cognitive-service/migrations/ ./migrations/
 
 # Create non-root user
 RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app

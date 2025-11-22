@@ -9,19 +9,25 @@ RUN apk add --no-cache git make ca-certificates
 # Set working directory
 WORKDIR /build
 
-# Copy go mod files
-COPY go.mod go.sum ./
+# Copy shared module first
+COPY shared/go ./shared/go
+
+# Copy service go mod files
+COPY services/data-ingestion-service/go.mod services/data-ingestion-service/go.sum ./services/data-ingestion-service/
 
 # Download dependencies
+WORKDIR /build/services/data-ingestion-service
 RUN go mod download
 
 # Copy source code
-COPY . .
+WORKDIR /build
+COPY services/data-ingestion-service ./services/data-ingestion-service
 
 # Build the binary
+WORKDIR /build/services/data-ingestion-service
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
     -ldflags='-w -s -extldflags "-static"' \
-    -o data-ingestion-service \
+    -o /build/data-ingestion-service \
     ./cmd/server/main.go
 
 # Stage 2: Runtime

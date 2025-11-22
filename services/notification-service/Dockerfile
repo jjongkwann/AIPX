@@ -6,14 +6,22 @@ WORKDIR /app
 # Install dependencies
 RUN apk add --no-cache git ca-certificates
 
-# Copy go mod files
-COPY go.mod go.sum ./
+# Copy shared module first
+COPY shared/go ./shared/go
+
+# Copy service go mod files
+COPY services/notification-service/go.mod services/notification-service/go.sum ./services/notification-service/
+
+# Download dependencies
+WORKDIR /app/services/notification-service
 RUN go mod download
 
 # Copy source
-COPY . .
+WORKDIR /app
+COPY services/notification-service ./services/notification-service
 
 # Build binary
+WORKDIR /app/services/notification-service
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
     -ldflags="-w -s" \
     -o /app/bin/server \
@@ -30,7 +38,7 @@ WORKDIR /app
 COPY --from=builder /app/bin/server .
 
 # Copy config
-COPY --from=builder /app/config ./config
+COPY --from=builder /app/services/notification-service/config ./config
 
 # Non-root user
 RUN addgroup -g 1000 app && \

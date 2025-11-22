@@ -12,17 +12,17 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy dependency files
-COPY pyproject.toml ./
+COPY services/strategy-worker/pyproject.toml ./
 
 # Install Python dependencies
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -e .
 
 # Copy application code
-COPY src/ ./src/
-COPY config/ ./config/
-COPY migrations/ ./migrations/
-COPY scripts/ ./scripts/
+COPY services/strategy-worker/src/ ./src/
+COPY services/strategy-worker/config/ ./config/
+COPY services/strategy-worker/migrations/ ./migrations/
+COPY services/strategy-worker/scripts/ ./scripts/
 
 # Generate gRPC stubs (will be run during build)
 # Uncomment after proto files are available

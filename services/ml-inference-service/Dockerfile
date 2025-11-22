@@ -12,14 +12,14 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements
-COPY requirements.txt .
+COPY services/ml-inference-service/requirements.txt .
 
 # Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy source code
-COPY src/ ./src/
-COPY training/ ./training/
+COPY services/ml-inference-service/src/ ./src/
+COPY services/ml-inference-service/training/ ./training/
 
 # Create directories
 RUN mkdir -p /models /data/training /models/checkpoints
