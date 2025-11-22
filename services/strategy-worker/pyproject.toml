@@ -4,7 +4,6 @@ version = "0.1.0"
 description = "AIPX Strategy Worker - Executes approved trading strategies via OMS"
 authors = [{name = "AIPX Team"}]
 requires-python = ">=3.11"
-readme = "README.md"
 license = {text = "MIT"}
 
 dependencies = [

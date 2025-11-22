@@ -1,11 +1,11 @@
 module notification-service
 
-go 1.24
+go 1.24.0
 
 require (
 	github.com/jackc/pgx/v5 v5.5.1
-	shared v0.0.0
 	github.com/stretchr/testify v1.11.1
+	shared v0.0.0
 )
 
 require (
