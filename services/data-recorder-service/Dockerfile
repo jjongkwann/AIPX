@@ -6,22 +6,16 @@ RUN apk add --no-cache git make
 
 WORKDIR /build
 
-# Copy shared module first
-COPY shared/go ./shared/go
-
 # Copy service go mod files
-COPY services/data-recorder-service/go.mod services/data-recorder-service/go.sum ./services/data-recorder-service/
+COPY services/data-recorder-service/go.mod services/data-recorder-service/go.sum ./
 
 # Download dependencies
-WORKDIR /build/services/data-recorder-service
 RUN go mod download
 
 # Copy source code
-WORKDIR /build
-COPY services/data-recorder-service ./services/data-recorder-service
+COPY services/data-recorder-service/ ./
 
 # Build the binary
-WORKDIR /build/services/data-recorder-service
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
     -ldflags='-w -s -extldflags "-static"' \
     -o /build/data-recorder-service \
@@ -38,7 +32,7 @@ WORKDIR /app
 COPY --from=builder /build/data-recorder-service .
 
 # Copy migrations
-COPY --from=builder /build/services/data-recorder-service/migrations ./migrations
+COPY --from=builder /build/migrations ./migrations
 
 # Create non-root user
 RUN addgroup -g 1000 appuser && \
