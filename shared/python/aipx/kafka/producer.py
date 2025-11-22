@@ -3,9 +3,11 @@ Kafka Producer wrapper using confluent-kafka
 """
 
 import json
-from typing import Optional, Any, Callable
-from confluent_kafka import Producer, KafkaError
+from collections.abc import Callable
+from typing import Any
+
 import structlog
+from confluent_kafka import KafkaError, Producer
 
 logger = structlog.get_logger(__name__)
 
@@ -17,7 +19,7 @@ class KafkaProducer:
         self,
         brokers: str,
         topic: str,
-        client_id: Optional[str] = None,
+        client_id: str | None = None,
         compression_type: str = "snappy",
         max_retries: int = 3,
     ):
@@ -54,9 +56,9 @@ class KafkaProducer:
     def send(
         self,
         value: Any,
-        key: Optional[bytes] = None,
-        topic: Optional[str] = None,
-        callback: Optional[Callable] = None,
+        key: bytes | None = None,
+        topic: str | None = None,
+        callback: Callable | None = None,
     ):
         """
         Send message to Kafka
@@ -129,7 +131,7 @@ class KafkaProducer:
 def create_producer(
     brokers: str,
     topic: str,
-    **kwargs,
+    **kwargs: Any,
 ) -> KafkaProducer:
     """
     Factory function to create Kafka producer

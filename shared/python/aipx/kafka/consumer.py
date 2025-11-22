@@ -3,9 +3,11 @@ Kafka Consumer wrapper using confluent-kafka
 """
 
 import json
-from typing import List, Callable, Optional, Any
-from confluent_kafka import Consumer, KafkaError, KafkaException
+from collections.abc import Callable
+from typing import Any
+
 import structlog
+from confluent_kafka import Consumer, KafkaError, KafkaException
 
 logger = structlog.get_logger(__name__)
 
@@ -16,7 +18,7 @@ class KafkaConsumer:
     def __init__(
         self,
         brokers: str,
-        topics: List[str],
+        topics: list[str],
         group_id: str,
         auto_offset_reset: str = "latest",
         enable_auto_commit: bool = True,
@@ -56,7 +58,7 @@ class KafkaConsumer:
         self,
         handler: Callable[[Any], None],
         timeout: float = 1.0,
-        max_messages: Optional[int] = None,
+        max_messages: int | None = None,
     ):
         """
         Start consuming messages
@@ -133,9 +135,9 @@ class KafkaConsumer:
 
 def create_consumer(
     brokers: str,
-    topics: List[str],
+    topics: list[str],
     group_id: str,
-    **kwargs,
+    **kwargs: Any,
 ) -> KafkaConsumer:
     """
     Factory function to create Kafka consumer
