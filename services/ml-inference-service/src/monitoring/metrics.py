@@ -1,7 +1,7 @@
 """Metrics collection and monitoring."""
 from collections import defaultdict
 from datetime import datetime, timedelta
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 import asyncio
 import logging
 from dataclasses import dataclass, field

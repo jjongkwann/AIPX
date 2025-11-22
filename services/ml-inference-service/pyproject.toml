@@ -12,8 +12,8 @@ dependencies = [
     "pydantic>=2.5.0",
     "pydantic-settings>=2.1.0",
 
-    # Triton Client
-    "tritonclient[all]>=2.40.0",
+    # Triton Client (http/grpc only - cuda extras require specific Python versions)
+    "tritonclient[http,grpc]>=2.40.0",
 
     # ML Libraries
     "torch>=2.1.0",
@@ -52,10 +52,12 @@ dev = [
     "pytest-cov>=4.1.0",
     "pytest-benchmark>=4.0.0",
     "pytest-mock>=3.12.0",
+    "pytest-lazy-fixture>=0.6.0",
     "httpx>=0.25.0",
     "black>=23.0.0",
     "ruff>=0.1.0",
     "mypy>=1.7.0",
+    "psutil>=5.9.0",
 ]
 
 test = [
@@ -63,7 +65,9 @@ test = [
     "pytest-asyncio>=0.21.0",
     "pytest-cov>=4.1.0",
     "pytest-benchmark>=4.0.0",
+    "pytest-lazy-fixture>=0.6.0",
     "locust>=2.20.0",
+    "psutil>=5.9.0",
 ]
 
 [build-system]

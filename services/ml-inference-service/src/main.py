@@ -77,7 +77,7 @@ class PredictPriceResponse(BaseModel):
     confidence: float
     model_name: str
     model_version: str
-    inference_time_ms: Optional[float]
+    inference_time_ms: Optional[float] = None
     timestamp: datetime
 
 

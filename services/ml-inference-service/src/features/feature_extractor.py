@@ -276,11 +276,18 @@ class FeatureExtractor:
             ]
 
             importance = {}
+            pred_flat = predictions.flatten()
             for i, name in enumerate(feature_names):
-                # Calculate correlation between feature and predictions
-                feature_values = features[:, :, i].flatten()
-                correlation = np.corrcoef(feature_values, predictions.flatten())[0, 1]
-                importance[name] = abs(correlation)
+                # Use last timestep features (most recent) for correlation with predictions
+                feature_values = features[:, -1, i]
+                if len(feature_values) == len(pred_flat):
+                    correlation = np.corrcoef(feature_values, pred_flat)[0, 1]
+                    if not np.isnan(correlation):
+                        importance[name] = abs(correlation)
+                    else:
+                        importance[name] = 0.0
+                else:
+                    importance[name] = 0.0
 
             return importance
 
@@ -364,6 +371,12 @@ class SentimentFeatureExtractor:
         Returns:
             Dictionary with batched input_ids and attention_mask
         """
+        if not texts:
+            return {
+                "input_ids": np.zeros((0, max_length), dtype=np.int64),
+                "attention_mask": np.zeros((0, max_length), dtype=np.int64)
+            }
+
         batch_tokens = [self.tokenize_text(text, max_length) for text in texts]
 
         return {
