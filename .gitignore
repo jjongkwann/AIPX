@@ -47,3 +47,6 @@ TODO/
 *SUMMARY.md
 *_COMPLETION.md
 *COMPLETION.md
+# Python virtual environments
+.venv/
+venv/
