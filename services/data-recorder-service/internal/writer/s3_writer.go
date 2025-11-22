@@ -16,8 +16,8 @@ import (
 	"github.com/xitongsys/parquet-go/parquet"
 	"github.com/xitongsys/parquet-go/writer"
 
-	"github.com/jjongkwann/aipx/services/data-recorder-service/internal/buffer"
-	"github.com/jjongkwann/aipx/services/data-recorder-service/internal/pkg/pb"
+	"data-recorder-service/internal/buffer"
+	"data-recorder-service/internal/pkg/pb"
 )
 
 // S3Writer writes market data to S3 in Parquet format

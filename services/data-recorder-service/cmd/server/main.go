@@ -12,11 +12,11 @@ import (
 
 	"github.com/rs/zerolog/log"
 
-	"github.com/jjongkwann/aipx/services/data-recorder-service/internal/buffer"
-	"github.com/jjongkwann/aipx/services/data-recorder-service/internal/config"
-	"github.com/jjongkwann/aipx/services/data-recorder-service/internal/consumer"
-	"github.com/jjongkwann/aipx/services/data-recorder-service/internal/pkg/logger"
-	"github.com/jjongkwann/aipx/services/data-recorder-service/internal/writer"
+	"data-recorder-service/internal/buffer"
+	"data-recorder-service/internal/config"
+	"data-recorder-service/internal/consumer"
+	"data-recorder-service/internal/pkg/logger"
+	"data-recorder-service/internal/writer"
 )
 
 // Service represents the data recorder service

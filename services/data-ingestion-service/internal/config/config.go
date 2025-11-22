@@ -6,9 +6,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/jjongkwann/aipx/shared/go/pkg/kafka"
-	"github.com/jjongkwann/aipx/shared/go/pkg/logger"
-	"github.com/jjongkwann/aipx/shared/go/pkg/redis"
+	"shared/pkg/kafka"
+	"shared/pkg/logger"
+	"shared/pkg/redis"
 )
 
 // Config holds all configuration for the data ingestion service

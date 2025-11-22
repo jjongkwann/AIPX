@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
-	"github.com/jjongkwann/aipx/services/data-ingestion-service/internal/config"
+	"data-ingestion-service/internal/config"
 	"github.com/rs/zerolog/log"
 )
 

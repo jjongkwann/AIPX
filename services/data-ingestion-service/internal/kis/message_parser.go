@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"time"
 
-	market_data "github.com/jjongkwann/aipx/shared/go/pkg/pb"
+	market_data "shared/pkg/pb"
 	"github.com/rs/zerolog/log"
 )
 

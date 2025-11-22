@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"sync/atomic"
 
-	"github.com/jjongkwann/aipx/shared/go/pkg/kafka"
-	market_data "github.com/jjongkwann/aipx/shared/go/pkg/pb"
+	"shared/pkg/kafka"
+	market_data "shared/pkg/pb"
 	"github.com/rs/zerolog/log"
 )
 

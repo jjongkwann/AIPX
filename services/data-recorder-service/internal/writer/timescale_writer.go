@@ -11,8 +11,8 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/jjongkwann/aipx/services/data-recorder-service/internal/buffer"
-	"github.com/jjongkwann/aipx/services/data-recorder-service/internal/pkg/pb"
+	"data-recorder-service/internal/buffer"
+	"data-recorder-service/internal/pkg/pb"
 )
 
 // TimescaleWriter writes market data to TimescaleDB

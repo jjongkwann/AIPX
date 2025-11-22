@@ -10,8 +10,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/jjongkwann/aipx/services/data-ingestion-service/internal/config"
-	"github.com/jjongkwann/aipx/shared/go/pkg/redis"
+	"data-ingestion-service/internal/config"
+	"shared/pkg/redis"
 	"github.com/rs/zerolog/log"
 )
 

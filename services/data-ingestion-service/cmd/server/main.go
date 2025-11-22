@@ -9,11 +9,11 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
-	"github.com/jjongkwann/aipx/services/data-ingestion-service/internal/config"
-	"github.com/jjongkwann/aipx/services/data-ingestion-service/internal/kis"
-	"github.com/jjongkwann/aipx/services/data-ingestion-service/internal/producer"
-	"github.com/jjongkwann/aipx/shared/go/pkg/logger"
-	"github.com/jjongkwann/aipx/shared/go/pkg/redis"
+	"data-ingestion-service/internal/config"
+	"data-ingestion-service/internal/kis"
+	"data-ingestion-service/internal/producer"
+	"shared/pkg/logger"
+	"shared/pkg/redis"
 	"github.com/rs/zerolog/log"
 )
 

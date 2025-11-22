@@ -7,9 +7,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/jjongkwann/aipx/services/data-recorder-service/internal/buffer"
-	"github.com/jjongkwann/aipx/services/data-recorder-service/internal/pkg/kafka"
-	"github.com/jjongkwann/aipx/services/data-recorder-service/internal/pkg/pb"
+	"data-recorder-service/internal/buffer"
+	"data-recorder-service/internal/pkg/kafka"
+	"data-recorder-service/internal/pkg/pb"
 	"github.com/rs/zerolog/log"
 )
 

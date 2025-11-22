@@ -6,7 +6,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/jjongkwann/aipx/services/data-recorder-service/internal/pkg/pb"
+	"data-recorder-service/internal/pkg/pb"
 )
 
 // MessageType represents the type of market data message
