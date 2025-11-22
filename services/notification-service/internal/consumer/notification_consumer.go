@@ -6,11 +6,11 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/AIPX/services/notification-service/internal/channels"
-	"github.com/AIPX/services/notification-service/internal/repository"
-	"github.com/AIPX/services/notification-service/internal/templates"
-	"github.com/jjongkwann/aipx/shared/go/pkg/kafka"
-	"github.com/jjongkwann/aipx/shared/go/pkg/logger"
+	"notification-service/internal/channels"
+	"notification-service/internal/repository"
+	"notification-service/internal/templates"
+	"shared/pkg/kafka"
+	"shared/pkg/logger"
 )
 
 // Topics that notification service subscribes to

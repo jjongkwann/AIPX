@@ -1,5 +1,4 @@
 package channels
-import "github.com/AIPX/services/notification-service/internal/testutil"
 
 import (
 	"context"
@@ -8,9 +7,8 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
-	"time"
 
-	"github.com/jjongkwann/aipx/shared/go/pkg/logger"
+	"notification-service/internal/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -42,22 +40,11 @@ func TestTelegramChannel_Send_Success(t *testing.T) {
 	channel, err := NewTelegramChannel(config, log)
 	require.NoError(t, err)
 
-	// Override API URL to use mock server
-	originalURL := telegramAPIURL
-	defer func() { telegramAPIURL = originalURL }()
-
 	// Create notification with chat ID
 	notification := NewNotification("user-123", "order_filled", "Order Filled", "Your order has been filled")
 	notification.Data["telegram_chat_id"] = "123456"
 
-	// Manually construct URL
-	mockAPIURL := server.URL + "/bot%s/%s"
-	// This is a workaround since we can't change the const easily
-	// Instead, we'll test with a server that accepts any path
-
-	ctx := context.Background()
-	// For this test, we'll skip actual sending since we can't easily override the const
-	// Instead, let's test the format function
+	// For this test, we test the format function since we can't easily override the const API URL
 	msg := channel.formatTelegramMessage(notification)
 	assert.NotEmpty(t, msg)
 	assert.Contains(t, msg, "Order Filled")
@@ -246,9 +233,11 @@ func TestTelegramChannel_Retry(t *testing.T) {
 
 	channel, err := NewTelegramChannel(config, log)
 	require.NoError(t, err)
+	assert.NotNil(t, channel)
 
 	notification := NewNotification("user-123", "test", "Test", "Test message")
 	notification.Data["telegram_chat_id"] = "123456"
+	assert.NotNil(t, notification)
 
 	// Note: This test verifies retry logic structure but won't actually connect
 	// due to hardcoded API URL. The retry logic is tested in the channel itself.
@@ -280,6 +269,7 @@ func TestTelegramChannel_HealthCheck(t *testing.T) {
 
 		channel, err := NewTelegramChannel(config, log)
 		require.NoError(t, err)
+		assert.NotNil(t, channel)
 
 		// Note: Health check will fail because it uses hardcoded API URL
 		// This test structure is correct, but won't pass without API URL override

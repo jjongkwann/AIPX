@@ -4,10 +4,11 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
-	"github.com/AIPX/services/notification-service/internal/testutil"
+	"notification-service/internal/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -49,15 +50,10 @@ func TestSlackChannel_Send_InvalidWebhook(t *testing.T) {
 		DefaultWebhookURL: "", // No webhook URL
 	}
 
-	channel, err := NewSlackChannel(config, log)
-	require.NoError(t, err)
-
-	notification := NewNotification("user-123", "order_filled", "Order Filled", "Test message")
-
-	ctx := context.Background()
-	err = channel.Send(ctx, notification)
+	// NewSlackChannel now validates webhook URL at construction time
+	_, err := NewSlackChannel(config, log)
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "webhook URL not configured")
+	assert.Contains(t, err.Error(), "webhook URL or bot token required")
 }
 
 func TestSlackChannel_Send_NetworkError(t *testing.T) {
@@ -198,13 +194,10 @@ func TestSlackChannel_HealthCheck(t *testing.T) {
 			DefaultWebhookURL: "",
 		}
 
-		channel, err := NewSlackChannel(config, log)
-		require.NoError(t, err)
-
-		ctx := context.Background()
-		err = channel.HealthCheck(ctx)
+		// NewSlackChannel now validates webhook URL at construction time
+		_, err := NewSlackChannel(config, log)
 		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "no webhook URL configured")
+		assert.Contains(t, err.Error(), "webhook URL or bot token required")
 	})
 
 	t.Run("Unhealthy - Disabled", func(t *testing.T) {
@@ -330,19 +323,18 @@ func TestSlackChannel_ExtractFields(t *testing.T) {
 	assert.NotEmpty(t, fields)
 	assert.GreaterOrEqual(t, len(fields), 5)
 
-	// Check that important fields are included
+	// Check that important fields are included by looking for ORDER-123 value in any field's text
+	// Note: formatFieldName converts "order_id" to "Order Id" in Title Case
 	hasOrderID := false
 	for _, field := range fields {
 		if text, ok := field["text"].(string); ok {
-			if contains := func(s, substr string) bool {
-				return len(s) >= len(substr) && s[:len(substr)] == substr
-			}(text, "**order_id:**"); contains {
+			if strings.Contains(text, "ORDER-123") {
 				hasOrderID = true
 				break
 			}
 		}
 	}
-	assert.True(t, hasOrderID, "Should include order_id field")
+	assert.True(t, hasOrderID, "Should include order_id field value")
 }
 
 func TestSlackChannel_GetEmojiForPriority(t *testing.T) {

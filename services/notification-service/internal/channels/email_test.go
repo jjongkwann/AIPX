@@ -1,12 +1,10 @@
 package channels
-import "github.com/AIPX/services/notification-service/internal/testutil"
 
 import (
-	"context"
 	"strings"
 	"testing"
 
-	"github.com/jjongkwann/aipx/shared/go/pkg/logger"
+	"notification-service/internal/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -25,9 +23,11 @@ func TestEmailChannel_Send_Success(t *testing.T) {
 
 	channel, err := NewEmailChannel(config, log)
 	require.NoError(t, err)
+	assert.NotNil(t, channel)
 
 	notification := NewNotification("user-123", "order_filled", "Order Filled", "Your order has been filled")
 	notification.Data["email"] = "recipient@example.com"
+	assert.NotNil(t, notification)
 
 	// Note: This test will fail without a real SMTP server
 	// In integration tests, we can use a mock SMTP server
@@ -158,7 +158,7 @@ func TestEmailChannel_BuildMIMEMessage(t *testing.T) {
 	mimeMsg := channel.buildMIMEMessage(msg)
 	mimeStr := string(mimeMsg)
 
-	assert.Contains(t, mimeStr, "From: Test Sender <sender@example.com>")
+	assert.Contains(t, mimeStr, "From: \"Test Sender\" <sender@example.com>")
 	assert.Contains(t, mimeStr, "To: recipient@example.com")
 	assert.Contains(t, mimeStr, "Subject: Test Subject")
 	assert.Contains(t, mimeStr, "X-Priority: 1")

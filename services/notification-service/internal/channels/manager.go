@@ -7,7 +7,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/jjongkwann/aipx/shared/go/pkg/logger"
+	"shared/pkg/logger"
 )
 
 // ChannelManager manages multiple notification channels

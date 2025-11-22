@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/jjongkwann/aipx/shared/go/pkg/logger"
+	"shared/pkg/logger"
 )
 
 // EmailConfig holds email-specific configuration

@@ -1,7 +1,7 @@
 package testutil
 
 import (
-	"github.com/jjongkwann/aipx/shared/go/pkg/logger"
+	"shared/pkg/logger"
 )
 
 // NewTestLogger creates a logger configured for testing

@@ -1,14 +1,12 @@
 package channels
-import "github.com/AIPX/services/notification-service/internal/testutil"
 
 import (
 	"context"
 	"testing"
 	"time"
 
-	"github.com/jjongkwann/aipx/shared/go/pkg/logger"
+	"notification-service/internal/testutil"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 // MockChannel for testing

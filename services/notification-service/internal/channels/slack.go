@@ -10,7 +10,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/jjongkwann/aipx/shared/go/pkg/logger"
+	"shared/pkg/logger"
 )
 
 // SlackConfig holds Slack-specific configuration

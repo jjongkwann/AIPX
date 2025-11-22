@@ -4,14 +4,14 @@ import (
 	"context"
 	"testing"
 
-	"github.com/AIPX/services/notification-service/internal/channels"
-	"github.com/jjongkwann/aipx/shared/go/pkg/logger"
+	"notification-service/internal/channels"
+	"notification-service/internal/testutil"
 )
 
 // Benchmark tests for notification service
 
 func BenchmarkSlackSend(b *testing.B) {
-	log := logger.New("test", logger.ErrorLevel, false)
+	log := testutil.NewTestLogger()
 	config := &channels.SlackConfig{
 		ChannelConfig:     channels.DefaultChannelConfig(),
 		DefaultWebhookURL: "https://example.com/webhook",
@@ -30,7 +30,7 @@ func BenchmarkSlackSend(b *testing.B) {
 }
 
 func BenchmarkTelegramSend(b *testing.B) {
-	log := logger.New("test", logger.ErrorLevel, false)
+	log := testutil.NewTestLogger()
 	config := &channels.TelegramConfig{
 		ChannelConfig: channels.DefaultChannelConfig(),
 		BotToken:      "test-token",
@@ -49,7 +49,7 @@ func BenchmarkTelegramSend(b *testing.B) {
 }
 
 func BenchmarkEmailSend(b *testing.B) {
-	log := logger.New("test", logger.ErrorLevel, false)
+	log := testutil.NewTestLogger()
 	config := &channels.EmailConfig{
 		ChannelConfig: channels.DefaultChannelConfig(),
 		SMTPHost:      "localhost",
@@ -72,7 +72,7 @@ func BenchmarkEmailSend(b *testing.B) {
 }
 
 func BenchmarkSlackFormatMessage(b *testing.B) {
-	log := logger.New("test", logger.ErrorLevel, false)
+	log := testutil.NewTestLogger()
 	config := &channels.SlackConfig{
 		ChannelConfig:     channels.DefaultChannelConfig(),
 		DefaultWebhookURL: "https://example.com/webhook",
@@ -90,12 +90,13 @@ func BenchmarkSlackFormatMessage(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		// Using reflection to access private method for benchmark
 		// In real implementation, this would be through public interface
+		_ = channel
 		_ = notification
 	}
 }
 
 func BenchmarkTelegramFormatMessage(b *testing.B) {
-	log := logger.New("test", logger.ErrorLevel, false)
+	log := testutil.NewTestLogger()
 	config := &channels.TelegramConfig{
 		ChannelConfig: channels.DefaultChannelConfig(),
 		BotToken:      "test-token",
@@ -115,7 +116,7 @@ func BenchmarkTelegramFormatMessage(b *testing.B) {
 }
 
 func BenchmarkEmailFormatHTML(b *testing.B) {
-	log := logger.New("test", logger.ErrorLevel, false)
+	log := testutil.NewTestLogger()
 	config := &channels.EmailConfig{
 		ChannelConfig: channels.DefaultChannelConfig(),
 		SMTPHost:      "localhost",
@@ -136,7 +137,7 @@ func BenchmarkEmailFormatHTML(b *testing.B) {
 }
 
 func BenchmarkChannelManagerSend(b *testing.B) {
-	log := logger.New("test", logger.ErrorLevel, false)
+	log := testutil.NewTestLogger()
 
 	// Create mock channels
 	slackMock := &MockChannel{name: "slack"}
@@ -163,7 +164,7 @@ func BenchmarkChannelManagerSend(b *testing.B) {
 }
 
 func BenchmarkParallelDelivery(b *testing.B) {
-	log := logger.New("test", logger.ErrorLevel, false)
+	log := testutil.NewTestLogger()
 
 	slackMock := &MockChannel{name: "slack"}
 	emailMock := &MockChannel{name: "email"}
@@ -201,7 +202,7 @@ func BenchmarkNotificationCreation(b *testing.B) {
 }
 
 func BenchmarkChannelManagerRouting(b *testing.B) {
-	log := logger.New("test", logger.ErrorLevel, false)
+	log := testutil.NewTestLogger()
 
 	slackMock := &MockChannel{name: "slack"}
 	emailMock := &MockChannel{name: "email"}

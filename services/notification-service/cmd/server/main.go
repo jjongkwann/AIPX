@@ -10,13 +10,13 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/AIPX/services/notification-service/internal/channels"
-	"github.com/AIPX/services/notification-service/internal/config"
-	"github.com/AIPX/services/notification-service/internal/consumer"
-	"github.com/AIPX/services/notification-service/internal/repository"
-	"github.com/AIPX/services/notification-service/internal/templates"
-	"github.com/jjongkwann/aipx/shared/go/pkg/kafka"
-	"github.com/jjongkwann/aipx/shared/go/pkg/logger"
+	"notification-service/internal/channels"
+	"notification-service/internal/config"
+	"notification-service/internal/consumer"
+	"notification-service/internal/repository"
+	"notification-service/internal/templates"
+	"shared/pkg/kafka"
+	"shared/pkg/logger"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 

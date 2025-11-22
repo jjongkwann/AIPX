@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/jjongkwann/aipx/shared/go/pkg/logger"
+	"shared/pkg/logger"
 )
 
 const (

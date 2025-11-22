@@ -5,8 +5,8 @@ import (
 	"os"
 	"testing"
 
-	"github.com/AIPX/services/notification-service/internal/channels"
-	"github.com/jjongkwann/aipx/shared/go/pkg/logger"
+	"notification-service/internal/channels"
+	"notification-service/internal/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -20,7 +20,7 @@ func TestE2E_Slack(t *testing.T) {
 		t.Skip("SLACK_WEBHOOK_URL not set, skipping E2E test")
 	}
 
-	log := logger.New("test", logger.InfoLevel, false)
+	log := testutil.NewTestLogger()
 	config := &channels.SlackConfig{
 		ChannelConfig:     channels.DefaultChannelConfig(),
 		DefaultWebhookURL: webhookURL,
@@ -54,7 +54,7 @@ func TestE2E_Telegram(t *testing.T) {
 		t.Skip("TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID not set, skipping E2E test")
 	}
 
-	log := logger.New("test", logger.InfoLevel, false)
+	log := testutil.NewTestLogger()
 	config := &channels.TelegramConfig{
 		ChannelConfig: channels.DefaultChannelConfig(),
 		BotToken:      botToken,
@@ -92,7 +92,7 @@ func TestE2E_Email(t *testing.T) {
 		t.Skip("SMTP credentials not set, skipping E2E test")
 	}
 
-	log := logger.New("test", logger.InfoLevel, false)
+	log := testutil.NewTestLogger()
 	config := &channels.EmailConfig{
 		ChannelConfig: channels.DefaultChannelConfig(),
 		SMTPHost:      smtpHost,
@@ -137,7 +137,7 @@ func TestE2E_AllChannels(t *testing.T) {
 		t.Skip("Not all channel credentials set, skipping multi-channel E2E test")
 	}
 
-	log := logger.New("test", logger.InfoLevel, false)
+	log := testutil.NewTestLogger()
 
 	// Create Slack channel
 	slackConfig := &channels.SlackConfig{
@@ -204,7 +204,7 @@ func TestE2E_AllChannels(t *testing.T) {
 }
 
 func TestE2E_HealthChecks(t *testing.T) {
-	log := logger.New("test", logger.InfoLevel, false)
+	log := testutil.NewTestLogger()
 
 	// Test Slack health check
 	slackWebhook := os.Getenv("SLACK_WEBHOOK_URL")

@@ -88,7 +88,7 @@ func NewURLValidator() *URLValidator {
 		"fe80::/10",       // Link-local
 		"ff00::/8",        // Multicast
 		"::/128",          // Unspecified address
-		"::ffff:0:0/96",   // IPv4 mapped addresses
+		// Note: ::ffff:0:0/96 removed - it matches all IPv4 addresses when parsed by Go
 		"64:ff9b::/96",    // IPv4/IPv6 translation
 		"100::/64",        // Discard prefix
 		"2001::/32",       // Teredo tunneling
