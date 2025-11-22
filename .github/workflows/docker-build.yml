@@ -204,6 +204,7 @@ jobs:
 
       - name: Build and push ${{ matrix.base }}
         run: |
+          IMAGE_NAME_LOWER=$(echo "${{ env.IMAGE_NAME }}" | tr '[:upper:]' '[:lower:]')
           if [ "${{ matrix.base }}" == "go-base" ]; then
             cat > Dockerfile.go-base <<EOF
           FROM golang:1.22-alpine AS builder
@@ -214,8 +215,8 @@ jobs:
           EOF
             docker buildx build \
               --platform linux/amd64,linux/arm64 \
-              --tag ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/go-base:latest \
-              --tag ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/go-base:${{ github.sha }} \
+              --tag ${{ env.REGISTRY }}/${IMAGE_NAME_LOWER}/go-base:latest \
+              --tag ${{ env.REGISTRY }}/${IMAGE_NAME_LOWER}/go-base:${{ github.sha }} \
               --push \
               -f Dockerfile.go-base .
           elif [ "${{ matrix.base }}" == "python-base" ]; then
@@ -230,8 +231,8 @@ jobs:
           EOF
             docker buildx build \
               --platform linux/amd64,linux/arm64 \
-              --tag ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/python-base:latest \
-              --tag ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/python-base:${{ github.sha }} \
+              --tag ${{ env.REGISTRY }}/${IMAGE_NAME_LOWER}/python-base:latest \
+              --tag ${{ env.REGISTRY }}/${IMAGE_NAME_LOWER}/python-base:${{ github.sha }} \
               --push \
               -f Dockerfile.python-base .
           fi
