@@ -4,9 +4,9 @@ import asyncio
 import json
 from typing import Any, Callable
 
+import structlog
 from aiokafka import AIOKafkaConsumer, ConsumerRecord
 from aiokafka.errors import KafkaError
-import structlog
 
 from ..config import KafkaConfig
 

@@ -4,16 +4,16 @@ Kafka messaging package for AIPX.
 Provides producer and consumer interfaces for Apache Kafka messaging.
 """
 
-from .producer import KafkaProducer
-from .consumer import KafkaConsumer
 from .config import KafkaConfig
+from .consumer import KafkaConsumer
 from .exceptions import (
+    KafkaConnectionError,
+    KafkaConsumerError,
     KafkaError,
     KafkaProducerError,
-    KafkaConsumerError,
-    KafkaConnectionError,
     KafkaSerializationError,
 )
+from .producer import KafkaProducer
 
 __all__ = [
     "KafkaProducer",

@@ -1,7 +1,8 @@
 """Tests for feature extractor."""
-import pytest
+
 import numpy as np
 import pandas as pd
+import pytest
 
 from src.features.feature_extractor import FeatureExtractor, SentimentFeatureExtractor
 
@@ -11,11 +12,11 @@ def sample_ohlcv_data():
     """Generate sample OHLCV data."""
     np.random.seed(42)
     data = {
-        'open': np.random.uniform(70000, 72000, 100),
-        'high': np.random.uniform(71000, 73000, 100),
-        'low': np.random.uniform(69000, 71000, 100),
-        'close': np.random.uniform(70000, 72000, 100),
-        'volume': np.random.uniform(1000000, 2000000, 100)
+        "open": np.random.uniform(70000, 72000, 100),
+        "high": np.random.uniform(71000, 73000, 100),
+        "low": np.random.uniform(69000, 71000, 100),
+        "close": np.random.uniform(70000, 72000, 100),
+        "volume": np.random.uniform(1000000, 2000000, 100),
     }
     return pd.DataFrame(data)
 
@@ -48,13 +49,15 @@ def test_extract_price_features_insufficient_data():
     extractor = FeatureExtractor()
 
     # Only 30 rows, need 60
-    df = pd.DataFrame({
-        'open': np.random.rand(30),
-        'high': np.random.rand(30),
-        'low': np.random.rand(30),
-        'close': np.random.rand(30),
-        'volume': np.random.rand(30)
-    })
+    df = pd.DataFrame(
+        {
+            "open": np.random.rand(30),
+            "high": np.random.rand(30),
+            "low": np.random.rand(30),
+            "close": np.random.rand(30),
+            "volume": np.random.rand(30),
+        }
+    )
 
     with pytest.raises(ValueError, match="need at least 60"):
         extractor.extract_price_features(df, window_size=60)
@@ -65,12 +68,14 @@ def test_extract_price_features_missing_columns():
     extractor = FeatureExtractor()
 
     # Missing 'volume' column
-    df = pd.DataFrame({
-        'open': np.random.rand(100),
-        'high': np.random.rand(100),
-        'low': np.random.rand(100),
-        'close': np.random.rand(100)
-    })
+    df = pd.DataFrame(
+        {
+            "open": np.random.rand(100),
+            "high": np.random.rand(100),
+            "low": np.random.rand(100),
+            "close": np.random.rand(100),
+        }
+    )
 
     with pytest.raises(ValueError, match="must contain columns"):
         extractor.extract_price_features(df, window_size=60)
@@ -134,7 +139,7 @@ def test_sentiment_feature_extractor():
     extractor = SentimentFeatureExtractor()
 
     # Check that tokenizer is initialized (or None as fallback)
-    assert hasattr(extractor, 'tokenizer')
+    assert hasattr(extractor, "tokenizer")
 
 
 def test_tokenize_text():
@@ -161,11 +166,7 @@ def test_batch_tokenize():
     """Test batch tokenization."""
     extractor = SentimentFeatureExtractor()
 
-    texts = [
-        "Samsung reports strong earnings",
-        "Stock market shows positive trends",
-        "New AI chip announced"
-    ]
+    texts = ["Samsung reports strong earnings", "Stock market shows positive trends", "New AI chip announced"]
 
     batch_tokens = extractor.batch_tokenize(texts, max_length=512)
 

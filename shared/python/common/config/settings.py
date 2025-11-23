@@ -1,8 +1,8 @@
 """Settings management for AIPX."""
 
-from dataclasses import dataclass, field
-from typing import Optional, Dict, Any
 import os
+from dataclasses import dataclass, field
+from typing import Any, Dict, Optional
 
 
 @dataclass
@@ -51,10 +51,7 @@ class DatabaseSettings:
             PostgreSQL connection string
         """
         driver = "postgresql+asyncpg" if async_driver else "postgresql"
-        return (
-            f"{driver}://{self.username}:{self.password}@"
-            f"{self.host}:{self.port}/{self.database}"
-        )
+        return f"{driver}://{self.username}:{self.password}@{self.host}:{self.port}/{self.database}"
 
 
 @dataclass

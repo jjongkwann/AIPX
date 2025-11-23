@@ -1,6 +1,6 @@
 """Portfolio manager for backtesting"""
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime
 from typing import Dict, List, Optional
 
@@ -8,6 +8,7 @@ from typing import Dict, List, Optional
 @dataclass
 class Position:
     """Position in a symbol"""
+
     symbol: str
     quantity: int
     avg_price: float
@@ -16,6 +17,7 @@ class Position:
 @dataclass
 class Trade:
     """Trade record"""
+
     timestamp: datetime
     symbol: str
     side: str  # 'buy' or 'sell'
@@ -41,7 +43,7 @@ class PortfolioManager:
         self,
         initial_cash: float,
         commission_rate: float = 0.0003,  # 0.03%
-        tax_rate: float = 0.0023  # 0.23% (Korean stock tax)
+        tax_rate: float = 0.0023,  # 0.23% (Korean stock tax)
     ):
         if initial_cash <= 0:
             raise ValueError("initial_cash must be positive")
@@ -59,13 +61,7 @@ class PortfolioManager:
         self.realized_pnl = 0.0
         self.total_commission = 0.0
 
-    def execute_buy(
-        self,
-        symbol: str,
-        quantity: int,
-        price: float,
-        timestamp: datetime
-    ) -> bool:
+    def execute_buy(self, symbol: str, quantity: int, price: float, timestamp: datetime) -> bool:
         """
         Execute a buy order
 
@@ -96,31 +92,16 @@ class PortfolioManager:
             pos.avg_price = total_cost_basis / total_quantity
             pos.quantity = total_quantity
         else:
-            self.positions[symbol] = Position(
-                symbol=symbol,
-                quantity=quantity,
-                avg_price=price
-            )
+            self.positions[symbol] = Position(symbol=symbol, quantity=quantity, avg_price=price)
 
         # Record trade
-        self.trade_history.append(Trade(
-            timestamp=timestamp,
-            symbol=symbol,
-            side='buy',
-            quantity=quantity,
-            price=price,
-            commission=commission
-        ))
+        self.trade_history.append(
+            Trade(timestamp=timestamp, symbol=symbol, side="buy", quantity=quantity, price=price, commission=commission)
+        )
 
         return True
 
-    def execute_sell(
-        self,
-        symbol: str,
-        quantity: int,
-        price: float,
-        timestamp: datetime
-    ) -> bool:
+    def execute_sell(self, symbol: str, quantity: int, price: float, timestamp: datetime) -> bool:
         """
         Execute a sell order
 
@@ -159,15 +140,17 @@ class PortfolioManager:
             del self.positions[symbol]
 
         # Record trade
-        self.trade_history.append(Trade(
-            timestamp=timestamp,
-            symbol=symbol,
-            side='sell',
-            quantity=quantity,
-            price=price,
-            commission=commission,
-            pnl=pnl
-        ))
+        self.trade_history.append(
+            Trade(
+                timestamp=timestamp,
+                symbol=symbol,
+                side="sell",
+                quantity=quantity,
+                price=price,
+                commission=commission,
+                pnl=pnl,
+            )
+        )
 
         return True
 
@@ -182,8 +165,7 @@ class PortfolioManager:
             Total equity value
         """
         position_value = sum(
-            pos.quantity * current_prices.get(pos.symbol, pos.avg_price)
-            for pos in self.positions.values()
+            pos.quantity * current_prices.get(pos.symbol, pos.avg_price) for pos in self.positions.values()
         )
         return self.cash + position_value
 
@@ -194,22 +176,15 @@ class PortfolioManager:
             current_price = current_prices.get(pos.symbol, pos.avg_price)
             current_value = pos.quantity * current_price
             cost_basis = pos.quantity * pos.avg_price
-            unrealized += (current_value - cost_basis)
+            unrealized += current_value - cost_basis
         return unrealized
 
-    def update_equity_curve(
-        self,
-        timestamp: datetime,
-        current_prices: Dict[str, float]
-    ):
+    def update_equity_curve(self, timestamp: datetime, current_prices: Dict[str, float]):
         """Record current equity for equity curve"""
         equity = self.get_equity(current_prices)
-        self.equity_curve.append({
-            'timestamp': timestamp,
-            'equity': equity,
-            'cash': self.cash,
-            'position_value': equity - self.cash
-        })
+        self.equity_curve.append(
+            {"timestamp": timestamp, "equity": equity, "cash": self.cash, "position_value": equity - self.cash}
+        )
 
     def get_total_pnl(self, current_prices: Dict[str, float]) -> float:
         """Get total P&L (realized + unrealized)"""

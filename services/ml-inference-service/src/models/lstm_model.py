@@ -1,8 +1,10 @@
 """LSTM model for price prediction."""
+
+import logging
+from typing import Optional, Tuple
+
 import torch
 import torch.nn as nn
-from typing import Tuple, Optional
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -16,7 +18,7 @@ class LSTMPredictor(nn.Module):
         hidden_size: int = 128,
         num_layers: int = 2,
         dropout: float = 0.2,
-        bidirectional: bool = False
+        bidirectional: bool = False,
     ):
         """
         Initialize LSTM predictor.
@@ -42,14 +44,11 @@ class LSTMPredictor(nn.Module):
             num_layers=num_layers,
             batch_first=True,
             dropout=dropout if num_layers > 1 else 0,
-            bidirectional=bidirectional
+            bidirectional=bidirectional,
         )
 
         # Attention layer
-        self.attention = nn.Linear(
-            hidden_size * (2 if bidirectional else 1),
-            1
-        )
+        self.attention = nn.Linear(hidden_size * (2 if bidirectional else 1), 1)
 
         # Output layers
         fc_input_size = hidden_size * (2 if bidirectional else 1)
@@ -104,13 +103,7 @@ class LSTMPredictor(nn.Module):
 class AdvancedLSTMPredictor(nn.Module):
     """Advanced LSTM with residual connections and layer normalization."""
 
-    def __init__(
-        self,
-        input_size: int = 5,
-        hidden_size: int = 256,
-        num_layers: int = 3,
-        dropout: float = 0.3
-    ):
+    def __init__(self, input_size: int = 5, hidden_size: int = 256, num_layers: int = 3, dropout: float = 0.3):
         """Initialize advanced LSTM predictor."""
         super(AdvancedLSTMPredictor, self).__init__()
 
@@ -123,32 +116,22 @@ class AdvancedLSTMPredictor(nn.Module):
         self.layer_norm_input = nn.LayerNorm(hidden_size)
 
         # LSTM layers with residual connections
-        self.lstm_layers = nn.ModuleList([
-            nn.LSTM(
-                input_size=hidden_size,
-                hidden_size=hidden_size,
-                num_layers=1,
-                batch_first=True,
-                dropout=0
-            )
-            for _ in range(num_layers)
-        ])
+        self.lstm_layers = nn.ModuleList(
+            [
+                nn.LSTM(input_size=hidden_size, hidden_size=hidden_size, num_layers=1, batch_first=True, dropout=0)
+                for _ in range(num_layers)
+            ]
+        )
 
         # Layer normalization for each LSTM layer
-        self.layer_norms = nn.ModuleList([
-            nn.LayerNorm(hidden_size)
-            for _ in range(num_layers)
-        ])
+        self.layer_norms = nn.ModuleList([nn.LayerNorm(hidden_size) for _ in range(num_layers)])
 
         # Dropout
         self.dropout = nn.Dropout(dropout)
 
         # Multi-head attention
         self.multihead_attention = nn.MultiheadAttention(
-            embed_dim=hidden_size,
-            num_heads=8,
-            dropout=dropout,
-            batch_first=True
+            embed_dim=hidden_size, num_heads=8, dropout=dropout, batch_first=True
         )
 
         # Output layers
@@ -206,11 +189,7 @@ class AdvancedLSTMPredictor(nn.Module):
 class EnsembleCombiner(nn.Module):
     """Combines LSTM price prediction with sentiment analysis."""
 
-    def __init__(
-        self,
-        hidden_size: int = 64,
-        dropout: float = 0.2
-    ):
+    def __init__(self, hidden_size: int = 64, dropout: float = 0.2):
         """
         Initialize ensemble combiner.
 
@@ -233,10 +212,7 @@ class EnsembleCombiner(nn.Module):
         self.sigmoid = nn.Sigmoid()
 
     def forward(
-        self,
-        price_pred: torch.Tensor,
-        sentiment: torch.Tensor,
-        sentiment_conf: torch.Tensor
+        self, price_pred: torch.Tensor, sentiment: torch.Tensor, sentiment_conf: torch.Tensor
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
         """
         Combine predictions.
@@ -280,32 +256,28 @@ def create_lstm_model(config: dict) -> nn.Module:
     Returns:
         LSTM model instance
     """
-    model_type = config.get('type', 'basic')
+    model_type = config.get("type", "basic")
 
-    if model_type == 'basic':
+    if model_type == "basic":
         return LSTMPredictor(
-            input_size=config.get('input_size', 5),
-            hidden_size=config.get('hidden_size', 128),
-            num_layers=config.get('num_layers', 2),
-            dropout=config.get('dropout', 0.2),
-            bidirectional=config.get('bidirectional', False)
+            input_size=config.get("input_size", 5),
+            hidden_size=config.get("hidden_size", 128),
+            num_layers=config.get("num_layers", 2),
+            dropout=config.get("dropout", 0.2),
+            bidirectional=config.get("bidirectional", False),
         )
-    elif model_type == 'advanced':
+    elif model_type == "advanced":
         return AdvancedLSTMPredictor(
-            input_size=config.get('input_size', 5),
-            hidden_size=config.get('hidden_size', 256),
-            num_layers=config.get('num_layers', 3),
-            dropout=config.get('dropout', 0.3)
+            input_size=config.get("input_size", 5),
+            hidden_size=config.get("hidden_size", 256),
+            num_layers=config.get("num_layers", 3),
+            dropout=config.get("dropout", 0.3),
         )
     else:
         raise ValueError(f"Unknown model type: {model_type}")
 
 
-def save_model_for_triton(
-    model: nn.Module,
-    save_path: str,
-    example_input: Optional[torch.Tensor] = None
-):
+def save_model_for_triton(model: nn.Module, save_path: str, example_input: Optional[torch.Tensor] = None):
     """
     Save model in TorchScript format for Triton.
 

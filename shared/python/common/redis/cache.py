@@ -1,10 +1,10 @@
 """Redis cache implementation for AIPX."""
 
-import logging
-from typing import Any, Optional, Callable
-import json
-from functools import wraps
 import hashlib
+import json
+import logging
+from functools import wraps
+from typing import Any, Callable, Optional
 
 from .client import RedisClient
 from .config import RedisConfig
@@ -118,9 +118,7 @@ class RedisCache:
                 extra={"key": key, "error": str(e)},
                 exc_info=True,
             )
-            raise RedisCacheError(
-                f"Failed to get cached value: {str(e)}", original_error=e
-            ) from e
+            raise RedisCacheError(f"Failed to get cached value: {str(e)}", original_error=e) from e
 
     async def set(
         self,
@@ -161,9 +159,7 @@ class RedisCache:
                 extra={"key": key, "error": str(e)},
                 exc_info=True,
             )
-            raise RedisCacheError(
-                f"Failed to cache value: {str(e)}", original_error=e
-            ) from e
+            raise RedisCacheError(f"Failed to cache value: {str(e)}", original_error=e) from e
 
     async def delete(self, *keys: str) -> int:
         """

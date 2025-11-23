@@ -1,7 +1,7 @@
 """Logging context management for AIPX."""
 
 from contextlib import contextmanager
-from typing import Any, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from .logger import Logger

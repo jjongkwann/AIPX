@@ -1,11 +1,11 @@
 """Structured logging implementation for AIPX."""
 
+import json
 import logging
 import sys
-import json
-from typing import Any, Dict, Optional
-from datetime import datetime
 import traceback
+from datetime import datetime
+from typing import Any, Dict, Optional
 
 
 class JSONFormatter(logging.Formatter):
@@ -100,9 +100,7 @@ class Logger:
         if use_json:
             formatter = JSONFormatter()
         else:
-            formatter = logging.Formatter(
-                "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-            )
+            formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 
         handler.setFormatter(formatter)
         self._logger.addHandler(handler)
@@ -298,9 +296,7 @@ def setup_logging(
     if use_json:
         formatter = JSONFormatter()
     else:
-        formatter = logging.Formatter(
-            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-        )
+        formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 
     handler.setFormatter(formatter)
     root_logger.addHandler(handler)

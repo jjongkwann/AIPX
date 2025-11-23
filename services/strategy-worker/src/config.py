@@ -63,10 +63,7 @@ class DatabaseConfig(BaseSettings):
     @property
     def dsn(self) -> str:
         """Build PostgreSQL DSN."""
-        return (
-            f"postgresql://{self.user}:{self.password}@"
-            f"{self.host}:{self.port}/{self.database}"
-        )
+        return f"postgresql://{self.user}:{self.password}@{self.host}:{self.port}/{self.database}"
 
 
 class RedisConfig(BaseSettings):
@@ -187,9 +184,7 @@ def get_config() -> Config:
     """Get global config instance."""
     global config
     if config is None:
-        config_path = os.getenv(
-            "CONFIG_PATH", "/Users/jk/workspace/AIPX/services/strategy-worker/config/config.yaml"
-        )
+        config_path = os.getenv("CONFIG_PATH", "/Users/jk/workspace/AIPX/services/strategy-worker/config/config.yaml")
         config = Config.from_yaml(config_path)
     return config
 

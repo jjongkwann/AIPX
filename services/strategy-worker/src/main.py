@@ -3,7 +3,6 @@
 import asyncio
 import signal
 import sys
-from pathlib import Path
 
 import structlog
 import uvloop

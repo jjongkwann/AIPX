@@ -8,7 +8,7 @@ from kafka import KafkaProducer as ApacheKafkaProducer
 from kafka.errors import KafkaError as ApacheKafkaError
 
 from .config import KafkaConfig
-from .exceptions import KafkaProducerError, KafkaConnectionError, KafkaSerializationError
+from .exceptions import KafkaConnectionError, KafkaProducerError, KafkaSerializationError
 
 logger = logging.getLogger(__name__)
 

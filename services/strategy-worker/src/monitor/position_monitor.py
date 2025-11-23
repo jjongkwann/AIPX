@@ -148,9 +148,7 @@ class PositionMonitor:
                 logger.info("Position closed", symbol=symbol)
                 return
 
-            avg_price = (
-                (existing.entry_price * existing.quantity) + (entry_price * quantity)
-            ) / total_quantity
+            avg_price = ((existing.entry_price * existing.quantity) + (entry_price * quantity)) / total_quantity
 
             self.positions[symbol] = Position(
                 symbol=symbol,
@@ -286,9 +284,7 @@ class PositionMonitor:
         try:
             # Create position snapshot
             snapshot_id = uuid4()
-            positions_dict = {
-                symbol: pos.to_dict() for symbol, pos in self.positions.items()
-            }
+            positions_dict = {symbol: pos.to_dict() for symbol, pos in self.positions.items()}
             total_value = await self.get_portfolio_value()
 
             await self.repository.create_position_snapshot(

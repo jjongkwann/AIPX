@@ -1,10 +1,9 @@
 """Validation tests comparing metrics against reference implementations"""
 
-import pytest
-import numpy as np
-import pandas as pd
 from datetime import datetime, timedelta
 
+import numpy as np
+import pytest
 from src.metrics.performance_metrics import PerformanceMetrics
 from src.metrics.risk_metrics import RiskMetrics
 
@@ -17,8 +16,8 @@ class TestMetricsValidation:
         """Validate CAGR against manually calculated known values"""
         # Simple case: 10M -> 12M in 1 year = 20% CAGR
         equity_curve = [
-            {'timestamp': datetime(2024, 1, 1), 'equity': 10000000},
-            {'timestamp': datetime(2025, 1, 1), 'equity': 12000000}
+            {"timestamp": datetime(2024, 1, 1), "equity": 10000000},
+            {"timestamp": datetime(2025, 1, 1), "equity": 12000000},
         ]
 
         cagr = PerformanceMetrics.calculate_cagr(equity_curve, years=1.0)
@@ -31,8 +30,8 @@ class TestMetricsValidation:
         """Validate CAGR over multiple years"""
         # 10M -> 14.641M in 2 years = ~20% CAGR (1.2^2 = 1.44)
         equity_curve = [
-            {'timestamp': datetime(2024, 1, 1), 'equity': 10000000},
-            {'timestamp': datetime(2026, 1, 1), 'equity': 14400000}
+            {"timestamp": datetime(2024, 1, 1), "equity": 10000000},
+            {"timestamp": datetime(2026, 1, 1), "equity": 14400000},
         ]
 
         cagr = PerformanceMetrics.calculate_cagr(equity_curve, years=2.0)
@@ -50,17 +49,14 @@ class TestMetricsValidation:
             12000000,  # +20% (peak)
             11400000,  # -5%
             10800000,  # -10%
-            9600000,   # -20% from peak (trough)
+            9600000,  # -20% from peak (trough)
             10200000,  # Recovery
             11000000,
         ]
 
         equity_curve = []
         for i, equity in enumerate(equity_values):
-            equity_curve.append({
-                'timestamp': datetime(2024, 1, 1) + timedelta(days=i),
-                'equity': equity
-            })
+            equity_curve.append({"timestamp": datetime(2024, 1, 1) + timedelta(days=i), "equity": equity})
 
         mdd = PerformanceMetrics.calculate_mdd(equity_curve)
 
@@ -79,15 +75,12 @@ class TestMetricsValidation:
 
         equity_curve = []
         for i, equity in enumerate(equity_values):
-            equity_curve.append({
-                'timestamp': datetime(2024, 1, 1) + timedelta(days=i),
-                'equity': equity
-            })
+            equity_curve.append({"timestamp": datetime(2024, 1, 1) + timedelta(days=i), "equity": equity})
 
         sharpe = PerformanceMetrics.calculate_sharpe_ratio(
             equity_curve,
             risk_free_rate=0.0,  # No risk-free rate for simplicity
-            periods_per_year=252
+            periods_per_year=252,
         )
 
         # Manual calculation
@@ -108,16 +101,9 @@ class TestMetricsValidation:
 
         equity_curve = []
         for i, equity in enumerate(equity_values):
-            equity_curve.append({
-                'timestamp': datetime(2024, 1, 1) + timedelta(days=i),
-                'equity': equity
-            })
+            equity_curve.append({"timestamp": datetime(2024, 1, 1) + timedelta(days=i), "equity": equity})
 
-        sortino = PerformanceMetrics.calculate_sortino_ratio(
-            equity_curve,
-            risk_free_rate=0.0,
-            periods_per_year=252
-        )
+        sortino = PerformanceMetrics.calculate_sortino_ratio(equity_curve, risk_free_rate=0.0, periods_per_year=252)
 
         # Manual calculation
         mean_return = np.mean(returns)
@@ -137,27 +123,31 @@ class TestMetricsValidation:
 
         # 7 wins
         for i in range(7):
-            trades.append(Trade(
-                timestamp=datetime(2024, 1, 1) + timedelta(days=i*2+1),
-                symbol='005930',
-                side='sell',
-                quantity=10,
-                price=71000,
-                commission=300,
-                pnl=10000  # Positive
-            ))
+            trades.append(
+                Trade(
+                    timestamp=datetime(2024, 1, 1) + timedelta(days=i * 2 + 1),
+                    symbol="005930",
+                    side="sell",
+                    quantity=10,
+                    price=71000,
+                    commission=300,
+                    pnl=10000,  # Positive
+                )
+            )
 
         # 3 losses
         for i in range(3):
-            trades.append(Trade(
-                timestamp=datetime(2024, 1, 1) + timedelta(days=i*2+15),
-                symbol='005930',
-                side='sell',
-                quantity=10,
-                price=71000,
-                commission=300,
-                pnl=-5000  # Negative
-            ))
+            trades.append(
+                Trade(
+                    timestamp=datetime(2024, 1, 1) + timedelta(days=i * 2 + 15),
+                    symbol="005930",
+                    side="sell",
+                    quantity=10,
+                    price=71000,
+                    commission=300,
+                    pnl=-5000,  # Negative
+                )
+            )
 
         win_rate = PerformanceMetrics.calculate_win_rate(trades)
 
@@ -173,27 +163,31 @@ class TestMetricsValidation:
 
         # Total profit: 100,000
         for i in range(5):
-            trades.append(Trade(
-                timestamp=datetime(2024, 1, 1) + timedelta(days=i),
-                symbol='005930',
-                side='sell',
-                quantity=10,
-                price=71000,
-                commission=300,
-                pnl=20000
-            ))
+            trades.append(
+                Trade(
+                    timestamp=datetime(2024, 1, 1) + timedelta(days=i),
+                    symbol="005930",
+                    side="sell",
+                    quantity=10,
+                    price=71000,
+                    commission=300,
+                    pnl=20000,
+                )
+            )
 
         # Total loss: 40,000
         for i in range(4):
-            trades.append(Trade(
-                timestamp=datetime(2024, 1, 1) + timedelta(days=i+5),
-                symbol='005930',
-                side='sell',
-                quantity=10,
-                price=71000,
-                commission=300,
-                pnl=-10000
-            ))
+            trades.append(
+                Trade(
+                    timestamp=datetime(2024, 1, 1) + timedelta(days=i + 5),
+                    symbol="005930",
+                    side="sell",
+                    quantity=10,
+                    price=71000,
+                    commission=300,
+                    pnl=-10000,
+                )
+            )
 
         profit_factor = PerformanceMetrics.calculate_profit_factor(trades)
 
@@ -213,10 +207,7 @@ class TestMetricsValidation:
 
         equity_curve = []
         for i, equity in enumerate(equity_values):
-            equity_curve.append({
-                'timestamp': datetime(2024, 1, 1) + timedelta(hours=i),
-                'equity': equity
-            })
+            equity_curve.append({"timestamp": datetime(2024, 1, 1) + timedelta(hours=i), "equity": equity})
 
         var_95 = RiskMetrics.calculate_var(equity_curve, 0.95)
 
@@ -237,16 +228,14 @@ class TestMetricsValidation:
 
         equity_curve = []
         for i, equity in enumerate(equity_values):
-            equity_curve.append({
-                'timestamp': datetime(2024, 1, 1) + timedelta(days=i),
-                'equity': equity
-            })
+            equity_curve.append({"timestamp": datetime(2024, 1, 1) + timedelta(days=i), "equity": equity})
 
         volatility = RiskMetrics.calculate_volatility(equity_curve, periods_per_year=252)
 
         # Expected: ~2% * sqrt(252) = ~31.7% annualized
-        actual_returns = np.diff([p['equity'] for p in equity_curve]) / \
-                        np.array([p['equity'] for p in equity_curve[:-1]])
+        actual_returns = np.diff([p["equity"] for p in equity_curve]) / np.array(
+            [p["equity"] for p in equity_curve[:-1]]
+        )
         expected_vol = np.std(actual_returns, ddof=1) * np.sqrt(252) * 100
 
         assert abs(volatility - expected_vol) < 0.01
@@ -267,10 +256,7 @@ class TestMetricsValidation:
         # Spread over 1 year
         equity_curve = []
         for i, equity in enumerate(equity_values):
-            equity_curve.append({
-                'timestamp': datetime(2024, 1, 1) + timedelta(days=i*73),
-                'equity': equity
-            })
+            equity_curve.append({"timestamp": datetime(2024, 1, 1) + timedelta(days=i * 73), "equity": equity})
 
         calmar = RiskMetrics.calculate_calmar_ratio(equity_curve)
 
@@ -290,10 +276,7 @@ class TestMetricsValidation:
 
         equity_curve = []
         for i, equity in enumerate(equity_values):
-            equity_curve.append({
-                'timestamp': datetime(2024, 1, 1) + timedelta(days=i),
-                'equity': equity
-            })
+            equity_curve.append({"timestamp": datetime(2024, 1, 1) + timedelta(days=i), "equity": equity})
 
         beta = RiskMetrics.calculate_beta(equity_curve, market_returns[1:])
 
@@ -312,10 +295,7 @@ class TestMetricsValidation:
 
         equity_curve = []
         for i, equity in enumerate(equity_values):
-            equity_curve.append({
-                'timestamp': datetime(2024, 1, 1) + timedelta(hours=i),
-                'equity': equity
-            })
+            equity_curve.append({"timestamp": datetime(2024, 1, 1) + timedelta(hours=i), "equity": equity})
 
         var_95 = RiskMetrics.calculate_var(equity_curve, 0.95)
         cvar_95 = RiskMetrics.calculate_cvar(equity_curve, 0.95)
@@ -340,10 +320,7 @@ class TestMetricsValidation:
 
         equity_curve = []
         for i, equity in enumerate(equity_values):
-            equity_curve.append({
-                'timestamp': datetime(2024, 1, 1) + timedelta(days=i),
-                'equity': equity
-            })
+            equity_curve.append({"timestamp": datetime(2024, 1, 1) + timedelta(days=i), "equity": equity})
 
         # Calculate metrics
         cagr = PerformanceMetrics.calculate_cagr(equity_curve)
@@ -372,10 +349,7 @@ class TestMetricsValidation:
         equity_values = initial_equity * np.exp(np.cumsum(returns))
         equity_curve = []
         for i, equity in enumerate(equity_values):
-            equity_curve.append({
-                'timestamp': datetime(2024, 1, 1) + timedelta(hours=i),
-                'equity': equity
-            })
+            equity_curve.append({"timestamp": datetime(2024, 1, 1) + timedelta(hours=i), "equity": equity})
 
         sharpe_full = PerformanceMetrics.calculate_sharpe_ratio(equity_curve)
         vol_full = RiskMetrics.calculate_volatility(equity_curve)
@@ -392,10 +366,7 @@ class TestMetricsValidation:
             equity_values = initial_equity * np.exp(np.cumsum(sample_returns))
             equity_curve = []
             for i, equity in enumerate(equity_values):
-                equity_curve.append({
-                    'timestamp': datetime(2024, 1, 1) + timedelta(hours=i),
-                    'equity': equity
-                })
+                equity_curve.append({"timestamp": datetime(2024, 1, 1) + timedelta(hours=i), "equity": equity})
 
             sharpes.append(PerformanceMetrics.calculate_sharpe_ratio(equity_curve))
             vols.append(RiskMetrics.calculate_volatility(equity_curve))

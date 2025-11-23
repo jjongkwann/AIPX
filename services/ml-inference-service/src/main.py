@@ -1,24 +1,23 @@
 """FastAPI gateway for ML Inference Service."""
-from fastapi import FastAPI, HTTPException, Depends, BackgroundTasks
+
+import logging
+from contextlib import asynccontextmanager
+from datetime import datetime
+from typing import Any, Dict, List, Optional
+
+import numpy as np
+from fastapi import BackgroundTasks, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from contextlib import asynccontextmanager
 from pydantic import BaseModel, Field
-from typing import Optional, List, Dict, Any
-import logging
-import numpy as np
-from datetime import datetime
 
 from .config import settings
-from .triton_client import triton_client
-from .features.feature_extractor import price_feature_extractor, sentiment_feature_extractor
+from .features.feature_extractor import sentiment_feature_extractor
 from .monitoring.metrics import MetricsCollector
+from .triton_client import triton_client
 
 # Setup logging
-logging.basicConfig(
-    level=settings.log_level,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
+logging.basicConfig(level=settings.log_level, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
 # Metrics collector
@@ -47,7 +46,7 @@ app = FastAPI(
     title="AIPX ML Inference Service",
     description="Machine Learning inference service using NVIDIA Triton",
     version="1.0.0",
-    lifespan=lifespan
+    lifespan=lifespan,
 )
 
 # CORS middleware
@@ -63,16 +62,15 @@ app.add_middleware(
 # Request/Response Models
 class PredictPriceRequest(BaseModel):
     """Price prediction request."""
+
     symbol: str = Field(..., description="Stock symbol")
-    ohlcv_data: List[List[float]] = Field(
-        ...,
-        description="OHLCV data, shape (60, 5)"
-    )
+    ohlcv_data: List[List[float]] = Field(..., description="OHLCV data, shape (60, 5)")
     model_version: Optional[str] = Field(None, description="Model version")
 
 
 class PredictPriceResponse(BaseModel):
     """Price prediction response."""
+
     predicted_price: float
     confidence: float
     model_name: str
@@ -83,12 +81,14 @@ class PredictPriceResponse(BaseModel):
 
 class SentimentRequest(BaseModel):
     """Sentiment analysis request."""
+
     text: str = Field(..., description="Text to analyze")
     model_version: Optional[str] = Field(None, description="Model version")
 
 
 class SentimentResponse(BaseModel):
     """Sentiment analysis response."""
+
     sentiment: float = Field(..., description="Sentiment score (-1 to +1)")
     confidence: float
     model_name: str
@@ -98,6 +98,7 @@ class SentimentResponse(BaseModel):
 
 class EnsemblePredictRequest(BaseModel):
     """Ensemble prediction request."""
+
     symbol: str
     ohlcv_data: List[List[float]]
     news_text: str
@@ -106,6 +107,7 @@ class EnsemblePredictRequest(BaseModel):
 
 class EnsemblePredictResponse(BaseModel):
     """Ensemble prediction response."""
+
     final_prediction: float
     price_component: float
     sentiment_component: float
@@ -117,12 +119,14 @@ class EnsemblePredictResponse(BaseModel):
 
 class BatchPredictRequest(BaseModel):
     """Batch prediction request."""
+
     items: List[Dict[str, Any]]
     model_version: Optional[str] = None
 
 
 class HealthResponse(BaseModel):
     """Health check response."""
+
     status: str
     triton_connected: bool
     available_models: List[str]
@@ -149,7 +153,7 @@ async def health_check():
             status="healthy" if is_ready else "degraded",
             triton_connected=is_ready,
             available_models=available_models,
-            timestamp=datetime.utcnow()
+            timestamp=datetime.utcnow(),
         )
 
     except Exception as e:
@@ -161,8 +165,8 @@ async def health_check():
                 "triton_connected": False,
                 "available_models": [],
                 "timestamp": datetime.utcnow().isoformat(),
-                "error": str(e)
-            }
+                "error": str(e),
+            },
         )
 
 
@@ -187,16 +191,10 @@ async def predict_price(request: PredictPriceRequest, background_tasks: Backgrou
         # Validate input
         features = np.array(request.ohlcv_data, dtype=np.float32)
         if features.shape != (60, 5):
-            raise HTTPException(
-                status_code=400,
-                detail=f"Expected ohlcv_data shape (60, 5), got {features.shape}"
-            )
+            raise HTTPException(status_code=400, detail=f"Expected ohlcv_data shape (60, 5), got {features.shape}")
 
         # Make prediction
-        result = await triton_client.predict_price(
-            features=features,
-            model_version=request.model_version
-        )
+        result = await triton_client.predict_price(features=features, model_version=request.model_version)
 
         # Calculate confidence (simple heuristic)
         confidence = min(0.95, max(0.5, 1.0 - np.std(features[:, 0]) / np.mean(features[:, 0])))
@@ -207,7 +205,7 @@ async def predict_price(request: PredictPriceRequest, background_tasks: Backgrou
             metrics_collector.record_inference,
             model_name="lstm_price_predictor",
             inference_time_ms=inference_time,
-            success=True
+            success=True,
         )
 
         return PredictPriceResponse(
@@ -216,7 +214,7 @@ async def predict_price(request: PredictPriceRequest, background_tasks: Backgrou
             model_name=result["model_name"],
             model_version=result["model_version"],
             inference_time_ms=inference_time,
-            timestamp=datetime.utcnow()
+            timestamp=datetime.utcnow(),
         )
 
     except HTTPException:
@@ -224,10 +222,7 @@ async def predict_price(request: PredictPriceRequest, background_tasks: Backgrou
     except Exception as e:
         logger.error(f"Price prediction error: {e}")
         background_tasks.add_task(
-            metrics_collector.record_inference,
-            model_name="lstm_price_predictor",
-            inference_time_ms=0,
-            success=False
+            metrics_collector.record_inference, model_name="lstm_price_predictor", inference_time_ms=0, success=False
         )
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -254,9 +249,7 @@ async def predict_sentiment(request: SentimentRequest, background_tasks: Backgro
 
         # Make prediction
         result = await triton_client.analyze_sentiment(
-            input_ids=tokens["input_ids"],
-            attention_mask=tokens["attention_mask"],
-            model_version=request.model_version
+            input_ids=tokens["input_ids"], attention_mask=tokens["attention_mask"], model_version=request.model_version
         )
 
         # Record metrics
@@ -265,7 +258,7 @@ async def predict_sentiment(request: SentimentRequest, background_tasks: Backgro
             metrics_collector.record_inference,
             model_name="transformer_sentiment",
             inference_time_ms=inference_time,
-            success=True
+            success=True,
         )
 
         return SentimentResponse(
@@ -273,16 +266,13 @@ async def predict_sentiment(request: SentimentRequest, background_tasks: Backgro
             confidence=result["confidence"],
             model_name=result["model_name"],
             model_version=result["model_version"],
-            timestamp=datetime.utcnow()
+            timestamp=datetime.utcnow(),
         )
 
     except Exception as e:
         logger.error(f"Sentiment prediction error: {e}")
         background_tasks.add_task(
-            metrics_collector.record_inference,
-            model_name="transformer_sentiment",
-            inference_time_ms=0,
-            success=False
+            metrics_collector.record_inference, model_name="transformer_sentiment", inference_time_ms=0, success=False
         )
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -310,8 +300,7 @@ async def predict_ensemble(request: EnsemblePredictRequest, background_tasks: Ba
         price_features = np.array(request.ohlcv_data, dtype=np.float32)
         if price_features.shape != (60, 5):
             raise HTTPException(
-                status_code=400,
-                detail=f"Expected ohlcv_data shape (60, 5), got {price_features.shape}"
+                status_code=400, detail=f"Expected ohlcv_data shape (60, 5), got {price_features.shape}"
             )
 
         # Tokenize news text
@@ -322,7 +311,7 @@ async def predict_ensemble(request: EnsemblePredictRequest, background_tasks: Ba
             price_features=price_features,
             news_text_ids=tokens["input_ids"],
             attention_mask=tokens["attention_mask"],
-            model_version=request.model_version
+            model_version=request.model_version,
         )
 
         # Record metrics
@@ -331,7 +320,7 @@ async def predict_ensemble(request: EnsemblePredictRequest, background_tasks: Ba
             metrics_collector.record_inference,
             model_name="ensemble_predictor",
             inference_time_ms=inference_time,
-            success=True
+            success=True,
         )
 
         return EnsemblePredictResponse(
@@ -341,7 +330,7 @@ async def predict_ensemble(request: EnsemblePredictRequest, background_tasks: Ba
             confidence=result["confidence"],
             model_name=result["model_name"],
             model_version=result["model_version"],
-            timestamp=datetime.utcnow()
+            timestamp=datetime.utcnow(),
         )
 
     except HTTPException:
@@ -349,10 +338,7 @@ async def predict_ensemble(request: EnsemblePredictRequest, background_tasks: Ba
     except Exception as e:
         logger.error(f"Ensemble prediction error: {e}")
         background_tasks.add_task(
-            metrics_collector.record_inference,
-            model_name="ensemble_predictor",
-            inference_time_ms=0,
-            success=False
+            metrics_collector.record_inference, model_name="ensemble_predictor", inference_time_ms=0, success=False
         )
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -379,27 +365,19 @@ async def predict_batch(request: BatchPredictRequest):
         for item in request.items:
             features = np.array(item["ohlcv_data"], dtype=np.float32)
             if features.shape != (60, 5):
-                raise HTTPException(
-                    status_code=400,
-                    detail=f"Invalid shape for item: {features.shape}"
-                )
+                raise HTTPException(status_code=400, detail=f"Invalid shape for item: {features.shape}")
             features_batch.append(features)
 
         # Make batch prediction
         results = await triton_client.batch_predict_prices(
-            features_batch=features_batch,
-            model_version=request.model_version
+            features_batch=features_batch, model_version=request.model_version
         )
 
         # Add symbol information
         for i, item in enumerate(request.items):
             results[i]["symbol"] = item.get("symbol", "unknown")
 
-        return {
-            "predictions": results,
-            "count": len(results),
-            "timestamp": datetime.utcnow()
-        }
+        return {"predictions": results, "count": len(results), "timestamp": datetime.utcnow()}
 
     except HTTPException:
         raise
@@ -428,11 +406,7 @@ async def get_metrics():
         server_metrics = await triton_client.get_server_metrics()
         app_metrics = metrics_collector.get_metrics()
 
-        return {
-            "server_metrics": server_metrics,
-            "app_metrics": app_metrics,
-            "timestamp": datetime.utcnow()
-        }
+        return {"server_metrics": server_metrics, "app_metrics": app_metrics, "timestamp": datetime.utcnow()}
     except Exception as e:
         logger.error(f"Failed to get metrics: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -440,10 +414,7 @@ async def get_metrics():
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(
-        "main:app",
-        host="0.0.0.0",
-        port=settings.service_port,
-        reload=True,
-        log_level=settings.log_level.lower()
+        "main:app", host="0.0.0.0", port=settings.service_port, reload=True, log_level=settings.log_level.lower()
     )

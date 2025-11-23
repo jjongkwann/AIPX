@@ -1,8 +1,9 @@
 """Unit tests for Data Loader"""
 
-import pytest
-import pandas as pd
 from datetime import datetime
+
+import pandas as pd
+import pytest
 from src.data.data_loader import DataLoader
 
 
@@ -26,11 +27,7 @@ class TestDataLoader:
         """Test that load_tick_data returns a DataFrame"""
         loader = DataLoader()
 
-        data = loader.load_tick_data(
-            symbol='005930',
-            start_date=datetime(2024, 1, 1),
-            end_date=datetime(2024, 12, 31)
-        )
+        data = loader.load_tick_data(symbol="005930", start_date=datetime(2024, 1, 1), end_date=datetime(2024, 12, 31))
 
         assert isinstance(data, pd.DataFrame)
 
@@ -38,13 +35,9 @@ class TestDataLoader:
         """Test that returned DataFrame has correct columns"""
         loader = DataLoader()
 
-        data = loader.load_tick_data(
-            symbol='005930',
-            start_date=datetime(2024, 1, 1),
-            end_date=datetime(2024, 12, 31)
-        )
+        data = loader.load_tick_data(symbol="005930", start_date=datetime(2024, 1, 1), end_date=datetime(2024, 12, 31))
 
-        expected_columns = ['timestamp', 'symbol', 'open', 'high', 'low', 'close', 'volume']
+        expected_columns = ["timestamp", "symbol", "open", "high", "low", "close", "volume"]
         assert all(col in data.columns for col in expected_columns)
 
     def test_load_tick_data_empty_symbol(self):
@@ -52,42 +45,28 @@ class TestDataLoader:
         loader = DataLoader()
 
         with pytest.raises(ValueError, match="symbol cannot be empty"):
-            loader.load_tick_data(
-                symbol='',
-                start_date=datetime(2024, 1, 1),
-                end_date=datetime(2024, 12, 31)
-            )
+            loader.load_tick_data(symbol="", start_date=datetime(2024, 1, 1), end_date=datetime(2024, 12, 31))
 
     def test_load_tick_data_invalid_date_range(self):
         """Test that invalid date range raises error"""
         loader = DataLoader()
 
         with pytest.raises(ValueError, match="start_date must be before end_date"):
-            loader.load_tick_data(
-                symbol='005930',
-                start_date=datetime(2024, 12, 31),
-                end_date=datetime(2024, 1, 1)
-            )
+            loader.load_tick_data(symbol="005930", start_date=datetime(2024, 12, 31), end_date=datetime(2024, 1, 1))
 
     def test_load_tick_data_same_dates(self):
         """Test that same start and end date raises error"""
         loader = DataLoader()
 
         with pytest.raises(ValueError):
-            loader.load_tick_data(
-                symbol='005930',
-                start_date=datetime(2024, 1, 1),
-                end_date=datetime(2024, 1, 1)
-            )
+            loader.load_tick_data(symbol="005930", start_date=datetime(2024, 1, 1), end_date=datetime(2024, 1, 1))
 
     def test_load_multiple_symbols(self):
         """Test loading data for multiple symbols"""
         loader = DataLoader()
 
         data = loader.load_multiple_symbols(
-            symbols=['005930', '000660'],
-            start_date=datetime(2024, 1, 1),
-            end_date=datetime(2024, 12, 31)
+            symbols=["005930", "000660"], start_date=datetime(2024, 1, 1), end_date=datetime(2024, 12, 31)
         )
 
         assert isinstance(data, pd.DataFrame)
@@ -97,11 +76,7 @@ class TestDataLoader:
         loader = DataLoader()
 
         with pytest.raises(ValueError, match="symbols list cannot be empty"):
-            loader.load_multiple_symbols(
-                symbols=[],
-                start_date=datetime(2024, 1, 1),
-                end_date=datetime(2024, 12, 31)
-            )
+            loader.load_multiple_symbols(symbols=[], start_date=datetime(2024, 1, 1), end_date=datetime(2024, 12, 31))
 
     def test_validate_data_valid(self, sample_tick_data):
         """Test validation with valid data"""
@@ -116,14 +91,16 @@ class TestDataLoader:
         loader = DataLoader()
 
         # Missing 'volume' column
-        data = pd.DataFrame({
-            'timestamp': [datetime(2024, 1, 1)],
-            'symbol': ['005930'],
-            'open': [71000],
-            'high': [72000],
-            'low': [70000],
-            'close': [71500]
-        })
+        data = pd.DataFrame(
+            {
+                "timestamp": [datetime(2024, 1, 1)],
+                "symbol": ["005930"],
+                "open": [71000],
+                "high": [72000],
+                "low": [70000],
+                "close": [71500],
+            }
+        )
 
         is_valid = loader.validate_data(data)
 
@@ -133,15 +110,17 @@ class TestDataLoader:
         """Test validation with null values"""
         loader = DataLoader()
 
-        data = pd.DataFrame({
-            'timestamp': [datetime(2024, 1, 1), datetime(2024, 1, 2)],
-            'symbol': ['005930', '005930'],
-            'open': [71000, None],  # Null value
-            'high': [72000, 72500],
-            'low': [70000, 71000],
-            'close': [71500, 72000],
-            'volume': [1000000, 1100000]
-        })
+        data = pd.DataFrame(
+            {
+                "timestamp": [datetime(2024, 1, 1), datetime(2024, 1, 2)],
+                "symbol": ["005930", "005930"],
+                "open": [71000, None],  # Null value
+                "high": [72000, 72500],
+                "low": [70000, 71000],
+                "close": [71500, 72000],
+                "volume": [1000000, 1100000],
+            }
+        )
 
         is_valid = loader.validate_data(data)
 
@@ -151,15 +130,17 @@ class TestDataLoader:
         """Test validation with negative prices"""
         loader = DataLoader()
 
-        data = pd.DataFrame({
-            'timestamp': [datetime(2024, 1, 1)],
-            'symbol': ['005930'],
-            'open': [-71000],  # Negative price
-            'high': [72000],
-            'low': [70000],
-            'close': [71500],
-            'volume': [1000000]
-        })
+        data = pd.DataFrame(
+            {
+                "timestamp": [datetime(2024, 1, 1)],
+                "symbol": ["005930"],
+                "open": [-71000],  # Negative price
+                "high": [72000],
+                "low": [70000],
+                "close": [71500],
+                "volume": [1000000],
+            }
+        )
 
         is_valid = loader.validate_data(data)
 
@@ -169,15 +150,17 @@ class TestDataLoader:
         """Test validation with zero prices"""
         loader = DataLoader()
 
-        data = pd.DataFrame({
-            'timestamp': [datetime(2024, 1, 1)],
-            'symbol': ['005930'],
-            'open': [0],  # Zero price
-            'high': [72000],
-            'low': [70000],
-            'close': [71500],
-            'volume': [1000000]
-        })
+        data = pd.DataFrame(
+            {
+                "timestamp": [datetime(2024, 1, 1)],
+                "symbol": ["005930"],
+                "open": [0],  # Zero price
+                "high": [72000],
+                "low": [70000],
+                "close": [71500],
+                "volume": [1000000],
+            }
+        )
 
         is_valid = loader.validate_data(data)
 
@@ -187,15 +170,17 @@ class TestDataLoader:
         """Test validation with negative volume"""
         loader = DataLoader()
 
-        data = pd.DataFrame({
-            'timestamp': [datetime(2024, 1, 1)],
-            'symbol': ['005930'],
-            'open': [71000],
-            'high': [72000],
-            'low': [70000],
-            'close': [71500],
-            'volume': [-1000000]  # Negative volume
-        })
+        data = pd.DataFrame(
+            {
+                "timestamp": [datetime(2024, 1, 1)],
+                "symbol": ["005930"],
+                "open": [71000],
+                "high": [72000],
+                "low": [70000],
+                "close": [71500],
+                "volume": [-1000000],  # Negative volume
+            }
+        )
 
         is_valid = loader.validate_data(data)
 
@@ -205,15 +190,17 @@ class TestDataLoader:
         """Test validation when high < low"""
         loader = DataLoader()
 
-        data = pd.DataFrame({
-            'timestamp': [datetime(2024, 1, 1)],
-            'symbol': ['005930'],
-            'open': [71000],
-            'high': [70000],  # High < Low
-            'low': [72000],
-            'close': [71500],
-            'volume': [1000000]
-        })
+        data = pd.DataFrame(
+            {
+                "timestamp": [datetime(2024, 1, 1)],
+                "symbol": ["005930"],
+                "open": [71000],
+                "high": [70000],  # High < Low
+                "low": [72000],
+                "close": [71500],
+                "volume": [1000000],
+            }
+        )
 
         is_valid = loader.validate_data(data)
 
@@ -223,9 +210,7 @@ class TestDataLoader:
         """Test validation with empty DataFrame"""
         loader = DataLoader()
 
-        data = pd.DataFrame(columns=[
-            'timestamp', 'symbol', 'open', 'high', 'low', 'close', 'volume'
-        ])
+        data = pd.DataFrame(columns=["timestamp", "symbol", "open", "high", "low", "close", "volume"])
 
         # Empty data is technically valid (no violations)
         is_valid = loader.validate_data(data)
@@ -236,19 +221,17 @@ class TestDataLoader:
         """Test validation with realistic OHLC data"""
         loader = DataLoader()
 
-        data = pd.DataFrame({
-            'timestamp': [
-                datetime(2024, 1, 1),
-                datetime(2024, 1, 2),
-                datetime(2024, 1, 3)
-            ],
-            'symbol': ['005930', '005930', '005930'],
-            'open': [71000, 71500, 72000],
-            'high': [72500, 72800, 73000],
-            'low': [70500, 71000, 71500],
-            'close': [71500, 72000, 72500],
-            'volume': [5000000, 5500000, 6000000]
-        })
+        data = pd.DataFrame(
+            {
+                "timestamp": [datetime(2024, 1, 1), datetime(2024, 1, 2), datetime(2024, 1, 3)],
+                "symbol": ["005930", "005930", "005930"],
+                "open": [71000, 71500, 72000],
+                "high": [72500, 72800, 73000],
+                "low": [70500, 71000, 71500],
+                "close": [71500, 72000, 72500],
+                "volume": [5000000, 5500000, 6000000],
+            }
+        )
 
         is_valid = loader.validate_data(data)
 
@@ -269,11 +252,9 @@ class TestDataLoader:
         loader = DataLoader()
 
         data = loader.load_multiple_symbols(
-            symbols=['005930', '000660', '035720'],
-            start_date=datetime(2024, 1, 1),
-            end_date=datetime(2024, 12, 31)
+            symbols=["005930", "000660", "035720"], start_date=datetime(2024, 1, 1), end_date=datetime(2024, 12, 31)
         )
 
         # Should have all required columns
-        expected_columns = ['timestamp', 'symbol', 'open', 'high', 'low', 'close', 'volume']
+        expected_columns = ["timestamp", "symbol", "open", "high", "low", "close", "volume"]
         assert all(col in data.columns for col in expected_columns)

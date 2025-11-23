@@ -1,6 +1,6 @@
 """Configuration validators for AIPX."""
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 
 class ConfigValidationError(Exception):
@@ -84,9 +84,7 @@ def validate_config(config: Dict[str, Any], schema: Dict[str, Any]) -> None:
         # Check choices
         choices = rules.get("choices")
         if choices and value not in choices:
-            errors.append(
-                f"Field '{field}' value '{value}' is not in allowed choices: {choices}"
-            )
+            errors.append(f"Field '{field}' value '{value}' is not in allowed choices: {choices}")
 
         # Check pattern
         pattern = rules.get("pattern")

@@ -1,21 +1,19 @@
 """Pytest configuration and fixtures."""
 
 import asyncio
-from decimal import Decimal
 from uuid import uuid4
 
 import pytest
-import pytest_asyncio
 
 from src.config import (
     Config,
     DatabaseConfig,
-    KafkaConfig,
-    OMSGrpcConfig,
-    RiskConfig,
     ExecutionConfig,
+    KafkaConfig,
     LoggingConfig,
     MonitoringConfig,
+    OMSGrpcConfig,
+    RiskConfig,
     ServiceConfig,
 )
 

@@ -1,10 +1,11 @@
 """Metrics collection and monitoring."""
-from collections import defaultdict
-from datetime import datetime, timedelta
-from typing import Dict, Any, List, Optional
+
 import asyncio
 import logging
+from collections import defaultdict
 from dataclasses import dataclass, field
+from datetime import datetime, timedelta
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -12,11 +13,12 @@ logger = logging.getLogger(__name__)
 @dataclass
 class InferenceMetrics:
     """Inference metrics for a model."""
+
     total_requests: int = 0
     successful_requests: int = 0
     failed_requests: int = 0
     total_inference_time_ms: float = 0.0
-    min_inference_time_ms: float = float('inf')
+    min_inference_time_ms: float = float("inf")
     max_inference_time_ms: float = 0.0
     inference_times: List[float] = field(default_factory=list)
 
@@ -77,12 +79,7 @@ class MetricsCollector:
         self.start_time = datetime.utcnow()
         self._lock = asyncio.Lock()
 
-    async def record_inference(
-        self,
-        model_name: str,
-        inference_time_ms: float,
-        success: bool
-    ):
+    async def record_inference(self, model_name: str, inference_time_ms: float, success: bool):
         """
         Record inference metrics.
 
@@ -99,14 +96,8 @@ class MetricsCollector:
             if success:
                 metrics.successful_requests += 1
                 metrics.total_inference_time_ms += inference_time_ms
-                metrics.min_inference_time_ms = min(
-                    metrics.min_inference_time_ms,
-                    inference_time_ms
-                )
-                metrics.max_inference_time_ms = max(
-                    metrics.max_inference_time_ms,
-                    inference_time_ms
-                )
+                metrics.min_inference_time_ms = min(metrics.min_inference_time_ms, inference_time_ms)
+                metrics.max_inference_time_ms = max(metrics.max_inference_time_ms, inference_time_ms)
 
                 # Keep limited history for percentile calculations
                 metrics.inference_times.append(inference_time_ms)
@@ -140,12 +131,13 @@ class MetricsCollector:
                 "success_rate": metrics.success_rate,
                 "avg_inference_time_ms": metrics.avg_inference_time_ms,
                 "min_inference_time_ms": metrics.min_inference_time_ms
-                if metrics.min_inference_time_ms != float('inf') else 0.0,
+                if metrics.min_inference_time_ms != float("inf")
+                else 0.0,
                 "max_inference_time_ms": metrics.max_inference_time_ms,
                 "p50_inference_time_ms": metrics.p50_inference_time_ms,
                 "p95_inference_time_ms": metrics.p95_inference_time_ms,
                 "p99_inference_time_ms": metrics.p99_inference_time_ms,
-                "requests_per_second": metrics.total_requests / uptime if uptime > 0 else 0.0
+                "requests_per_second": metrics.total_requests / uptime if uptime > 0 else 0.0,
             }
 
         # Return all metrics
@@ -158,19 +150,16 @@ class MetricsCollector:
                 "success_rate": metrics.success_rate,
                 "avg_inference_time_ms": metrics.avg_inference_time_ms,
                 "min_inference_time_ms": metrics.min_inference_time_ms
-                if metrics.min_inference_time_ms != float('inf') else 0.0,
+                if metrics.min_inference_time_ms != float("inf")
+                else 0.0,
                 "max_inference_time_ms": metrics.max_inference_time_ms,
                 "p50_inference_time_ms": metrics.p50_inference_time_ms,
                 "p95_inference_time_ms": metrics.p95_inference_time_ms,
                 "p99_inference_time_ms": metrics.p99_inference_time_ms,
-                "requests_per_second": metrics.total_requests / uptime if uptime > 0 else 0.0
+                "requests_per_second": metrics.total_requests / uptime if uptime > 0 else 0.0,
             }
 
-        return {
-            "models": all_metrics,
-            "uptime_seconds": uptime,
-            "start_time": self.start_time.isoformat()
-        }
+        return {"models": all_metrics, "uptime_seconds": uptime, "start_time": self.start_time.isoformat()}
 
     def reset_metrics(self, model_name: Optional[str] = None):
         """
@@ -190,11 +179,7 @@ class MetricsCollector:
 class ModelMonitor:
     """Monitor model performance and detect drift."""
 
-    def __init__(
-        self,
-        alert_threshold_ms: float = 1000.0,
-        error_rate_threshold: float = 0.05
-    ):
+    def __init__(self, alert_threshold_ms: float = 1000.0, error_rate_threshold: float = 0.05):
         """
         Initialize model monitor.
 
@@ -221,35 +206,41 @@ class ModelMonitor:
         for model_name, model_metrics in metrics.get("models", {}).items():
             # Check inference time
             if model_metrics["avg_inference_time_ms"] > self.alert_threshold_ms:
-                alerts.append({
-                    "severity": "warning",
-                    "model": model_name,
-                    "type": "high_latency",
-                    "message": f"Average inference time ({model_metrics['avg_inference_time_ms']:.2f}ms) "
-                               f"exceeds threshold ({self.alert_threshold_ms}ms)",
-                    "timestamp": datetime.utcnow().isoformat()
-                })
+                alerts.append(
+                    {
+                        "severity": "warning",
+                        "model": model_name,
+                        "type": "high_latency",
+                        "message": f"Average inference time ({model_metrics['avg_inference_time_ms']:.2f}ms) "
+                        f"exceeds threshold ({self.alert_threshold_ms}ms)",
+                        "timestamp": datetime.utcnow().isoformat(),
+                    }
+                )
 
             # Check error rate
             error_rate = 1.0 - model_metrics["success_rate"]
             if error_rate > self.error_rate_threshold:
-                alerts.append({
-                    "severity": "critical",
-                    "model": model_name,
-                    "type": "high_error_rate",
-                    "message": f"Error rate ({error_rate:.2%}) exceeds threshold ({self.error_rate_threshold:.2%})",
-                    "timestamp": datetime.utcnow().isoformat()
-                })
+                alerts.append(
+                    {
+                        "severity": "critical",
+                        "model": model_name,
+                        "type": "high_error_rate",
+                        "message": f"Error rate ({error_rate:.2%}) exceeds threshold ({self.error_rate_threshold:.2%})",
+                        "timestamp": datetime.utcnow().isoformat(),
+                    }
+                )
 
             # Check p99 latency
             if model_metrics["p99_inference_time_ms"] > self.alert_threshold_ms * 2:
-                alerts.append({
-                    "severity": "warning",
-                    "model": model_name,
-                    "type": "high_p99_latency",
-                    "message": f"P99 latency ({model_metrics['p99_inference_time_ms']:.2f}ms) is very high",
-                    "timestamp": datetime.utcnow().isoformat()
-                })
+                alerts.append(
+                    {
+                        "severity": "warning",
+                        "model": model_name,
+                        "type": "high_p99_latency",
+                        "message": f"P99 latency ({model_metrics['p99_inference_time_ms']:.2f}ms) is very high",
+                        "timestamp": datetime.utcnow().isoformat(),
+                    }
+                )
 
         self.alerts.extend(alerts)
         return alerts
@@ -266,10 +257,7 @@ class ModelMonitor:
         """
         cutoff = datetime.utcnow() - timedelta(hours=hours)
 
-        recent_alerts = [
-            alert for alert in self.alerts
-            if datetime.fromisoformat(alert["timestamp"]) > cutoff
-        ]
+        recent_alerts = [alert for alert in self.alerts if datetime.fromisoformat(alert["timestamp"]) > cutoff]
 
         return recent_alerts
 

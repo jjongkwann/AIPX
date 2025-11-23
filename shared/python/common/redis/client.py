@@ -1,8 +1,8 @@
 """Redis client implementation for AIPX."""
 
-import logging
-from typing import Any, Optional, Dict, List
 import json
+import logging
+from typing import Any, Dict, Optional
 
 import redis.asyncio as aioredis
 from redis.exceptions import RedisError as BaseRedisError
@@ -68,9 +68,7 @@ class RedisClient:
                 extra={"error": str(e)},
                 exc_info=True,
             )
-            raise RedisConnectionError(
-                f"Failed to connect to Redis: {str(e)}", original_error=e
-            ) from e
+            raise RedisConnectionError(f"Failed to connect to Redis: {str(e)}", original_error=e) from e
 
     async def close(self) -> None:
         """Close the Redis connection."""

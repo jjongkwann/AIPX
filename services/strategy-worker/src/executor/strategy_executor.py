@@ -150,6 +150,7 @@ class StrategyExecutor:
 
         # Update status
         from datetime import datetime
+
         await self.repository.update_execution_status(
             execution_id=execution_id,
             status="stopped",

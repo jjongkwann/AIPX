@@ -70,9 +70,7 @@ class ExecutionRepository:
         await self.db_pool.execute(query, execution_id, status, stopped_at)
         logger.info("Updated execution status", execution_id=str(execution_id), status=status)
 
-    async def update_positions(
-        self, execution_id: UUID, positions: dict[str, Any], total_exposure: Decimal
-    ) -> None:
+    async def update_positions(self, execution_id: UUID, positions: dict[str, Any], total_exposure: Decimal) -> None:
         """Update current positions.
 
         Args:
@@ -109,9 +107,7 @@ class ExecutionRepository:
             SET total_pnl = $2, realized_pnl = $3, unrealized_pnl = $4, daily_pnl = $5
             WHERE execution_id = $1
         """
-        await self.db_pool.execute(
-            query, execution_id, total_pnl, realized_pnl, unrealized_pnl, daily_pnl
-        )
+        await self.db_pool.execute(query, execution_id, total_pnl, realized_pnl, unrealized_pnl, daily_pnl)
 
     async def update_trade_stats(
         self, execution_id: UUID, total_trades: int, winning_trades: int, losing_trades: int
@@ -182,9 +178,7 @@ class ExecutionRepository:
                 order_id, execution_id, symbol, side, order_type, quantity, price, status
             ) VALUES ($1, $2, $3, $4, $5, $6, $7, 'PENDING')
         """
-        await self.db_pool.execute(
-            query, order_id, execution_id, symbol, side, order_type, quantity, price
-        )
+        await self.db_pool.execute(query, order_id, execution_id, symbol, side, order_type, quantity, price)
         logger.info(
             "Created order",
             order_id=str(order_id),
@@ -221,9 +215,7 @@ class ExecutionRepository:
                 cancelled_at = CASE WHEN $2 = 'CANCELLED' THEN NOW() ELSE cancelled_at END
             WHERE order_id = $1
         """
-        await self.db_pool.execute(
-            query, order_id, status, oms_order_id, filled_quantity, filled_price, error_message
-        )
+        await self.db_pool.execute(query, order_id, status, oms_order_id, filled_quantity, filled_price, error_message)
         logger.info("Updated order status", order_id=str(order_id), status=status)
 
     async def get_order(self, order_id: UUID) -> asyncpg.Record | None:

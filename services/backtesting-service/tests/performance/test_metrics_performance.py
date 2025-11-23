@@ -1,13 +1,13 @@
 """Performance benchmarks for metrics calculation"""
 
-import pytest
 import time
-import numpy as np
 from datetime import datetime, timedelta
 
+import numpy as np
+import pytest
+from src.engine.portfolio import Trade
 from src.metrics.performance_metrics import PerformanceMetrics
 from src.metrics.risk_metrics import RiskMetrics
-from src.engine.portfolio import Trade
 
 
 @pytest.mark.performance
@@ -25,12 +25,14 @@ class TestMetricsPerformance:
 
         equity_curve = []
         for i, date in enumerate(dates):
-            equity_curve.append({
-                'timestamp': date,
-                'equity': equity_values[i],
-                'cash': equity_values[i] * 0.3,
-                'position_value': equity_values[i] * 0.7
-            })
+            equity_curve.append(
+                {
+                    "timestamp": date,
+                    "equity": equity_values[i],
+                    "cash": equity_values[i] * 0.3,
+                    "position_value": equity_values[i] * 0.7,
+                }
+            )
 
         return equity_curve
 
@@ -44,12 +46,12 @@ class TestMetricsPerformance:
 
             trade = Trade(
                 timestamp=datetime(2024, 1, 1) + timedelta(hours=i),
-                symbol='005930',
-                side='buy' if i % 2 == 0 else 'sell',
+                symbol="005930",
+                side="buy" if i % 2 == 0 else "sell",
                 quantity=10,
                 price=70000 + np.random.randn() * 1000,
                 commission=300,
-                pnl=pnl
+                pnl=pnl,
             )
             trades.append(trade)
 
@@ -67,7 +69,7 @@ class TestMetricsPerformance:
 
         execution_time = (end_time - start_time) / 100 * 1000  # ms per call
 
-        print(f"\nCAGR Performance (10k points):")
+        print("\nCAGR Performance (10k points):")
         print(f"  Time per calculation: {execution_time:.2f}ms")
 
         # Target: < 100ms
@@ -85,7 +87,7 @@ class TestMetricsPerformance:
 
         execution_time = (end_time - start_time) / 100 * 1000
 
-        print(f"\nMDD Performance (10k points):")
+        print("\nMDD Performance (10k points):")
         print(f"  Time per calculation: {execution_time:.2f}ms")
 
         # Target: < 100ms
@@ -103,7 +105,7 @@ class TestMetricsPerformance:
 
         execution_time = (end_time - start_time) / 100 * 1000
 
-        print(f"\nSharpe Ratio Performance (10k points):")
+        print("\nSharpe Ratio Performance (10k points):")
         print(f"  Time per calculation: {execution_time:.2f}ms")
 
         # Target: < 100ms
@@ -121,7 +123,7 @@ class TestMetricsPerformance:
 
         execution_time = (end_time - start_time) / 100 * 1000
 
-        print(f"\nSortino Ratio Performance (10k points):")
+        print("\nSortino Ratio Performance (10k points):")
         print(f"  Time per calculation: {execution_time:.2f}ms")
 
         # Target: < 100ms
@@ -139,7 +141,7 @@ class TestMetricsPerformance:
 
         execution_time = (end_time - start_time) / 1000 * 1000
 
-        print(f"\nWin Rate Performance (1k trades):")
+        print("\nWin Rate Performance (1k trades):")
         print(f"  Time per calculation: {execution_time:.2f}ms")
 
         # Target: < 50ms
@@ -157,7 +159,7 @@ class TestMetricsPerformance:
 
         execution_time = (end_time - start_time) / 1000 * 1000
 
-        print(f"\nProfit Factor Performance (1k trades):")
+        print("\nProfit Factor Performance (1k trades):")
         print(f"  Time per calculation: {execution_time:.2f}ms")
 
         # Target: < 50ms
@@ -175,7 +177,7 @@ class TestMetricsPerformance:
 
         execution_time = (end_time - start_time) / 100 * 1000
 
-        print(f"\nVaR Performance (10k points):")
+        print("\nVaR Performance (10k points):")
         print(f"  Time per calculation: {execution_time:.2f}ms")
 
         # Target: < 100ms
@@ -193,7 +195,7 @@ class TestMetricsPerformance:
 
         execution_time = (end_time - start_time) / 100 * 1000
 
-        print(f"\nCVaR Performance (10k points):")
+        print("\nCVaR Performance (10k points):")
         print(f"  Time per calculation: {execution_time:.2f}ms")
 
         # Target: < 100ms
@@ -211,7 +213,7 @@ class TestMetricsPerformance:
 
         execution_time = (end_time - start_time) / 100 * 1000
 
-        print(f"\nVolatility Performance (10k points):")
+        print("\nVolatility Performance (10k points):")
         print(f"  Time per calculation: {execution_time:.2f}ms")
 
         # Target: < 100ms
@@ -230,7 +232,7 @@ class TestMetricsPerformance:
 
         execution_time = (end_time - start_time) / 100 * 1000
 
-        print(f"\nBeta Performance (10k points):")
+        print("\nBeta Performance (10k points):")
         print(f"  Time per calculation: {execution_time:.2f}ms")
 
         # Target: < 100ms
@@ -249,7 +251,7 @@ class TestMetricsPerformance:
 
         execution_time = (end_time - start_time) / 100 * 1000
 
-        print(f"\nAll Performance Metrics (10k points):")
+        print("\nAll Performance Metrics (10k points):")
         print(f"  Time per calculation: {execution_time:.2f}ms")
 
         # Target: < 500ms for all metrics
@@ -267,7 +269,7 @@ class TestMetricsPerformance:
 
         execution_time = (end_time - start_time) / 100 * 1000
 
-        print(f"\nAll Risk Metrics (10k points):")
+        print("\nAll Risk Metrics (10k points):")
         print(f"  Time per calculation: {execution_time:.2f}ms")
 
         # Target: < 500ms for all metrics
@@ -292,7 +294,7 @@ class TestMetricsPerformance:
             avg_time = (end_time - start_time) / 10 * 1000
             results.append((size, avg_time))
 
-        print(f"\nMetrics Scaling Performance:")
+        print("\nMetrics Scaling Performance:")
         for size, time_ms in results:
             print(f"  {size:5d} points: {time_ms:6.2f}ms")
 

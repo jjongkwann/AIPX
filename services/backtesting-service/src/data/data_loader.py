@@ -1,8 +1,9 @@
 """Data loader for historical market data"""
 
-import pandas as pd
 from datetime import datetime
-from typing import Optional, List
+from typing import List, Optional
+
+import pandas as pd
 
 
 class DataLoader:
@@ -17,12 +18,7 @@ class DataLoader:
         """
         self.data_source = data_source
 
-    def load_tick_data(
-        self,
-        symbol: str,
-        start_date: datetime,
-        end_date: datetime
-    ) -> pd.DataFrame:
+    def load_tick_data(self, symbol: str, start_date: datetime, end_date: datetime) -> pd.DataFrame:
         """
         Load tick data for a symbol within date range
 
@@ -42,22 +38,13 @@ class DataLoader:
 
         # If no data source, return empty DataFrame
         if self.data_source is None:
-            return pd.DataFrame(columns=[
-                'timestamp', 'symbol', 'open', 'high', 'low', 'close', 'volume'
-            ])
+            return pd.DataFrame(columns=["timestamp", "symbol", "open", "high", "low", "close", "volume"])
 
         # In production, this would query the database
         # For now, return empty DataFrame
-        return pd.DataFrame(columns=[
-            'timestamp', 'symbol', 'open', 'high', 'low', 'close', 'volume'
-        ])
+        return pd.DataFrame(columns=["timestamp", "symbol", "open", "high", "low", "close", "volume"])
 
-    def load_multiple_symbols(
-        self,
-        symbols: List[str],
-        start_date: datetime,
-        end_date: datetime
-    ) -> pd.DataFrame:
+    def load_multiple_symbols(self, symbols: List[str], start_date: datetime, end_date: datetime) -> pd.DataFrame:
         """
         Load tick data for multiple symbols
 
@@ -78,9 +65,7 @@ class DataLoader:
             all_data.append(data)
 
         if not all_data:
-            return pd.DataFrame(columns=[
-                'timestamp', 'symbol', 'open', 'high', 'low', 'close', 'volume'
-            ])
+            return pd.DataFrame(columns=["timestamp", "symbol", "open", "high", "low", "close", "volume"])
 
         return pd.concat(all_data, ignore_index=True)
 
@@ -94,7 +79,7 @@ class DataLoader:
         Returns:
             True if valid, False otherwise
         """
-        required_columns = ['timestamp', 'symbol', 'open', 'high', 'low', 'close', 'volume']
+        required_columns = ["timestamp", "symbol", "open", "high", "low", "close", "volume"]
 
         # Check columns exist
         if not all(col in data.columns for col in required_columns):
@@ -105,15 +90,19 @@ class DataLoader:
             return False
 
         # Check positive prices and volumes
-        if (data['open'] <= 0).any() or (data['high'] <= 0).any() or \
-           (data['low'] <= 0).any() or (data['close'] <= 0).any():
+        if (
+            (data["open"] <= 0).any()
+            or (data["high"] <= 0).any()
+            or (data["low"] <= 0).any()
+            or (data["close"] <= 0).any()
+        ):
             return False
 
-        if (data['volume'] < 0).any():
+        if (data["volume"] < 0).any():
             return False
 
         # Check high >= low
-        if (data['high'] < data['low']).any():
+        if (data["high"] < data["low"]).any():
             return False
 
         return True

@@ -1,12 +1,11 @@
 """Redis distributed lock implementation for AIPX."""
 
-import logging
 import asyncio
+import logging
 import uuid
 from typing import Optional
 
 from .client import RedisClient
-from .config import RedisConfig
 from .exceptions import RedisLockError
 
 logger = logging.getLogger(__name__)
@@ -125,9 +124,7 @@ class RedisLock:
                 extra={"resource": self._resource, "error": str(e)},
                 exc_info=True,
             )
-            raise RedisLockError(
-                f"Failed to acquire lock: {str(e)}", original_error=e
-            ) from e
+            raise RedisLockError(f"Failed to acquire lock: {str(e)}", original_error=e) from e
 
     async def release(self) -> bool:
         """
@@ -190,9 +187,7 @@ class RedisLock:
                 extra={"resource": self._resource, "error": str(e)},
                 exc_info=True,
             )
-            raise RedisLockError(
-                f"Failed to release lock: {str(e)}", original_error=e
-            ) from e
+            raise RedisLockError(f"Failed to release lock: {str(e)}", original_error=e) from e
 
     async def extend(self, additional_ttl: int) -> bool:
         """
@@ -252,9 +247,7 @@ class RedisLock:
                 extra={"resource": self._resource, "error": str(e)},
                 exc_info=True,
             )
-            raise RedisLockError(
-                f"Failed to extend lock: {str(e)}", original_error=e
-            ) from e
+            raise RedisLockError(f"Failed to extend lock: {str(e)}", original_error=e) from e
 
     async def is_locked(self) -> bool:
         """
@@ -275,9 +268,7 @@ class RedisLock:
                 extra={"resource": self._resource, "error": str(e)},
                 exc_info=True,
             )
-            raise RedisLockError(
-                f"Failed to check lock status: {str(e)}", original_error=e
-            ) from e
+            raise RedisLockError(f"Failed to check lock status: {str(e)}", original_error=e) from e
 
     async def __aenter__(self) -> "RedisLock":
         """Context manager entry."""

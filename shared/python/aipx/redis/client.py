@@ -3,7 +3,8 @@ Redis client wrapper
 """
 
 import json
-from typing import Optional, Any, List, Dict
+from typing import Any, Dict, List, Optional
+
 import redis
 import structlog
 
@@ -227,9 +228,7 @@ class RedisClient:
         Returns:
             Length of list after push
         """
-        serialized = [
-            json.dumps(v) if isinstance(v, (dict, list)) else v for v in values
-        ]
+        serialized = [json.dumps(v) if isinstance(v, (dict, list)) else v for v in values]
         return self.client.lpush(name, *serialized)
 
     def rpush(self, name: str, *values: Any) -> int:
@@ -243,9 +242,7 @@ class RedisClient:
         Returns:
             Length of list after push
         """
-        serialized = [
-            json.dumps(v) if isinstance(v, (dict, list)) else v for v in values
-        ]
+        serialized = [json.dumps(v) if isinstance(v, (dict, list)) else v for v in values]
         return self.client.rpush(name, *serialized)
 
     def lrange(self, name: str, start: int, end: int) -> List[Any]:

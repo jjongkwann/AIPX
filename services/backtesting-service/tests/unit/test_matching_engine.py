@@ -1,11 +1,9 @@
 """Unit tests for Matching Engine"""
 
-import pytest
-import numpy as np
 from datetime import datetime
-from src.engine.matching_engine import (
-    MatchingEngine, Order, OrderType, OrderSide, Fill
-)
+
+import numpy as np
+from src.engine.matching_engine import MatchingEngine, Order, OrderSide, OrderType
 
 
 class TestOrder:
@@ -14,14 +12,14 @@ class TestOrder:
     def test_order_creation(self):
         """Test creating an order"""
         order = Order(
-            symbol='005930',
+            symbol="005930",
             side=OrderSide.BUY,
             quantity=10,
             order_type=OrderType.MARKET,
-            timestamp=datetime(2024, 1, 1, 9, 0)
+            timestamp=datetime(2024, 1, 1, 9, 0),
         )
 
-        assert order.symbol == '005930'
+        assert order.symbol == "005930"
         assert order.side == OrderSide.BUY
         assert order.quantity == 10
         assert order.order_type == OrderType.MARKET
@@ -42,10 +40,7 @@ class TestMatchingEngine:
     def test_custom_parameters(self):
         """Test initialization with custom parameters"""
         engine = MatchingEngine(
-            latency_mean_ms=100.0,
-            latency_std_ms=30.0,
-            slippage_mean_pct=0.1,
-            slippage_std_pct=0.03
+            latency_mean_ms=100.0, latency_std_ms=30.0, slippage_mean_pct=0.1, slippage_std_pct=0.03
         )
 
         assert engine.latency_mean_ms == 100.0
@@ -58,12 +53,12 @@ class TestMatchingEngine:
         engine = MatchingEngine(random_seed=42)
 
         order = Order(
-            symbol='005930',
+            symbol="005930",
             side=OrderSide.BUY,
             quantity=50,
             order_type=OrderType.MARKET,
             price=71100,
-            timestamp=datetime(2024, 1, 1, 9, 0)
+            timestamp=datetime(2024, 1, 1, 9, 0),
         )
 
         fill = engine.match_order(order, sample_orderbook)
@@ -79,12 +74,12 @@ class TestMatchingEngine:
         engine = MatchingEngine(random_seed=42)
 
         order = Order(
-            symbol='005930',
+            symbol="005930",
             side=OrderSide.SELL,
             quantity=50,
             order_type=OrderType.MARKET,
             price=71000,
-            timestamp=datetime(2024, 1, 1, 9, 0)
+            timestamp=datetime(2024, 1, 1, 9, 0),
         )
 
         fill = engine.match_order(order, sample_orderbook)
@@ -99,11 +94,11 @@ class TestMatchingEngine:
         engine = MatchingEngine()
 
         order = Order(
-            symbol='005930',
+            symbol="005930",
             side=OrderSide.BUY,
             quantity=50,
             order_type=OrderType.MARKET,
-            timestamp=datetime(2024, 1, 1, 9, 0)
+            timestamp=datetime(2024, 1, 1, 9, 0),
         )
 
         fill = engine.match_order(order, empty_orderbook)
@@ -114,17 +109,14 @@ class TestMatchingEngine:
         """Test buy order with no asks returns None"""
         engine = MatchingEngine()
 
-        orderbook = {
-            'bids': [{'price': 71000, 'quantity': 100}],
-            'asks': []
-        }
+        orderbook = {"bids": [{"price": 71000, "quantity": 100}], "asks": []}
 
         order = Order(
-            symbol='005930',
+            symbol="005930",
             side=OrderSide.BUY,
             quantity=50,
             order_type=OrderType.MARKET,
-            timestamp=datetime(2024, 1, 1, 9, 0)
+            timestamp=datetime(2024, 1, 1, 9, 0),
         )
 
         fill = engine.match_order(order, orderbook)
@@ -135,17 +127,14 @@ class TestMatchingEngine:
         """Test sell order with no bids returns None"""
         engine = MatchingEngine()
 
-        orderbook = {
-            'bids': [],
-            'asks': [{'price': 71100, 'quantity': 100}]
-        }
+        orderbook = {"bids": [], "asks": [{"price": 71100, "quantity": 100}]}
 
         order = Order(
-            symbol='005930',
+            symbol="005930",
             side=OrderSide.SELL,
             quantity=50,
             order_type=OrderType.MARKET,
-            timestamp=datetime(2024, 1, 1, 9, 0)
+            timestamp=datetime(2024, 1, 1, 9, 0),
         )
 
         fill = engine.match_order(order, orderbook)
@@ -154,11 +143,7 @@ class TestMatchingEngine:
 
     def test_latency_simulation(self):
         """Test that latency follows normal distribution"""
-        engine = MatchingEngine(
-            latency_mean_ms=50.0,
-            latency_std_ms=20.0,
-            random_seed=42
-        )
+        engine = MatchingEngine(latency_mean_ms=50.0, latency_std_ms=20.0, random_seed=42)
 
         latencies = []
         for _ in range(100):
@@ -170,7 +155,7 @@ class TestMatchingEngine:
         std_latency = np.std(latencies)
 
         assert 40 < mean_latency < 60  # Within reasonable range
-        assert 10 < std_latency < 30   # Within reasonable range
+        assert 10 < std_latency < 30  # Within reasonable range
         assert all(l >= 0 for l in latencies)  # All non-negative
 
     def test_slippage_on_buy(self, sample_orderbook):
@@ -178,51 +163,51 @@ class TestMatchingEngine:
         engine = MatchingEngine(random_seed=42)
 
         order = Order(
-            symbol='005930',
+            symbol="005930",
             side=OrderSide.BUY,
             quantity=50,
             order_type=OrderType.MARKET,
-            timestamp=datetime(2024, 1, 1, 9, 0)
+            timestamp=datetime(2024, 1, 1, 9, 0),
         )
 
         fill = engine.match_order(order, sample_orderbook)
 
         # Fill price should be higher than best ask due to slippage
-        best_ask = min(sample_orderbook['asks'], key=lambda x: x['price'])
-        assert fill.fill_price >= best_ask['price']
+        best_ask = min(sample_orderbook["asks"], key=lambda x: x["price"])
+        assert fill.fill_price >= best_ask["price"]
 
     def test_slippage_on_sell(self, sample_orderbook):
         """Test that sell orders have negative slippage (lower price)"""
         engine = MatchingEngine(random_seed=42)
 
         order = Order(
-            symbol='005930',
+            symbol="005930",
             side=OrderSide.SELL,
             quantity=50,
             order_type=OrderType.MARKET,
-            timestamp=datetime(2024, 1, 1, 9, 0)
+            timestamp=datetime(2024, 1, 1, 9, 0),
         )
 
         fill = engine.match_order(order, sample_orderbook)
 
         # Fill price should be lower than best bid due to slippage
-        best_bid = max(sample_orderbook['bids'], key=lambda x: x['price'])
-        assert fill.fill_price <= best_bid['price']
+        best_bid = max(sample_orderbook["bids"], key=lambda x: x["price"])
+        assert fill.fill_price <= best_bid["price"]
 
     def test_fill_price_not_negative(self, sample_orderbook):
         """Test that fill price is never negative"""
         engine = MatchingEngine(
             slippage_mean_pct=10.0,  # Large slippage
             slippage_std_pct=5.0,
-            random_seed=42
+            random_seed=42,
         )
 
         order = Order(
-            symbol='005930',
+            symbol="005930",
             side=OrderSide.SELL,
             quantity=50,
             order_type=OrderType.MARKET,
-            timestamp=datetime(2024, 1, 1, 9, 0)
+            timestamp=datetime(2024, 1, 1, 9, 0),
         )
 
         fill = engine.match_order(order, sample_orderbook)
@@ -234,16 +219,16 @@ class TestMatchingEngine:
         engine = MatchingEngine()
 
         orderbook = {
-            'bids': [{'price': 71000, 'quantity': 30}],  # Only 30 available
-            'asks': [{'price': 71100, 'quantity': 30}]
+            "bids": [{"price": 71000, "quantity": 30}],  # Only 30 available
+            "asks": [{"price": 71100, "quantity": 30}],
         }
 
         order = Order(
-            symbol='005930',
+            symbol="005930",
             side=OrderSide.SELL,
             quantity=100,  # Want to sell 100
             order_type=OrderType.MARKET,
-            timestamp=datetime(2024, 1, 1, 9, 0)
+            timestamp=datetime(2024, 1, 1, 9, 0),
         )
 
         fill = engine.match_order(order, orderbook)
@@ -256,11 +241,11 @@ class TestMatchingEngine:
         engine = MatchingEngine()
 
         order = Order(
-            symbol='005930',
+            symbol="005930",
             side=OrderSide.BUY,
             quantity=50,  # Want 50, orderbook has 100+200+150 = 450
             order_type=OrderType.MARKET,
-            timestamp=datetime(2024, 1, 1, 9, 0)
+            timestamp=datetime(2024, 1, 1, 9, 0),
         )
 
         fill = engine.match_order(order, sample_orderbook)
@@ -270,21 +255,16 @@ class TestMatchingEngine:
 
     def test_large_order_fill(self, orderbook_generator):
         """Test filling a large order"""
-        orderbook = orderbook_generator(
-            mid_price=71000,
-            spread=100,
-            depth=10,
-            quantity_per_level=100
-        )
+        orderbook = orderbook_generator(mid_price=71000, spread=100, depth=10, quantity_per_level=100)
 
         engine = MatchingEngine()
 
         order = Order(
-            symbol='005930',
+            symbol="005930",
             side=OrderSide.BUY,
             quantity=500,
             order_type=OrderType.MARKET,
-            timestamp=datetime(2024, 1, 1, 9, 0)
+            timestamp=datetime(2024, 1, 1, 9, 0),
         )
 
         fill = engine.match_order(order, orderbook)
@@ -296,17 +276,14 @@ class TestMatchingEngine:
         """Test with zero liquidity orderbook"""
         engine = MatchingEngine()
 
-        orderbook = {
-            'bids': [{'price': 71000, 'quantity': 0}],
-            'asks': [{'price': 71100, 'quantity': 0}]
-        }
+        orderbook = {"bids": [{"price": 71000, "quantity": 0}], "asks": [{"price": 71100, "quantity": 0}]}
 
         order = Order(
-            symbol='005930',
+            symbol="005930",
             side=OrderSide.BUY,
             quantity=10,
             order_type=OrderType.MARKET,
-            timestamp=datetime(2024, 1, 1, 9, 0)
+            timestamp=datetime(2024, 1, 1, 9, 0),
         )
 
         fill = engine.match_order(order, orderbook)
@@ -318,12 +295,12 @@ class TestMatchingEngine:
         engine = MatchingEngine(random_seed=42)
 
         order = Order(
-            symbol='005930',
+            symbol="005930",
             side=OrderSide.BUY,
             quantity=50,
             order_type=OrderType.MARKET,
             price=71100,
-            timestamp=datetime(2024, 1, 1, 9, 0)
+            timestamp=datetime(2024, 1, 1, 9, 0),
         )
 
         fill = engine.match_order(order, sample_orderbook)
@@ -339,19 +316,19 @@ class TestMatchingEngine:
         engine2 = MatchingEngine(random_seed=123)
 
         order1 = Order(
-            symbol='005930',
+            symbol="005930",
             side=OrderSide.BUY,
             quantity=50,
             order_type=OrderType.MARKET,
-            timestamp=datetime(2024, 1, 1, 9, 0)
+            timestamp=datetime(2024, 1, 1, 9, 0),
         )
 
         order2 = Order(
-            symbol='005930',
+            symbol="005930",
             side=OrderSide.BUY,
             quantity=50,
             order_type=OrderType.MARKET,
-            timestamp=datetime(2024, 1, 1, 9, 0)
+            timestamp=datetime(2024, 1, 1, 9, 0),
         )
 
         fill1 = engine1.match_order(order1, sample_orderbook)
@@ -366,19 +343,19 @@ class TestMatchingEngine:
         engine2 = MatchingEngine(random_seed=456)
 
         order1 = Order(
-            symbol='005930',
+            symbol="005930",
             side=OrderSide.BUY,
             quantity=50,
             order_type=OrderType.MARKET,
-            timestamp=datetime(2024, 1, 1, 9, 0)
+            timestamp=datetime(2024, 1, 1, 9, 0),
         )
 
         order2 = Order(
-            symbol='005930',
+            symbol="005930",
             side=OrderSide.BUY,
             quantity=50,
             order_type=OrderType.MARKET,
-            timestamp=datetime(2024, 1, 1, 9, 0)
+            timestamp=datetime(2024, 1, 1, 9, 0),
         )
 
         fill1 = engine1.match_order(order1, sample_orderbook)

@@ -4,11 +4,12 @@ import heapq
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List
 
 
 class EventType(Enum):
     """Types of events in the backtesting engine"""
+
     MARKET_DATA = "market_data"
     ORDER = "order"
     FILL = "fill"
@@ -18,6 +19,7 @@ class EventType(Enum):
 @dataclass(order=True)
 class Event:
     """Event in the backtesting system"""
+
     timestamp: datetime = field(compare=True)
     event_type: EventType = field(compare=False)
     data: Dict[str, Any] = field(compare=False, default_factory=dict)
@@ -34,9 +36,7 @@ class EventLoop:
 
     def __init__(self):
         self._event_queue: List[Event] = []
-        self._handlers: Dict[EventType, List[Callable]] = {
-            event_type: [] for event_type in EventType
-        }
+        self._handlers: Dict[EventType, List[Callable]] = {event_type: [] for event_type in EventType}
         self._is_running = False
 
     def register_handler(self, event_type: EventType, handler: Callable):

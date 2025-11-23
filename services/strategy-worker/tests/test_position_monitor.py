@@ -2,11 +2,10 @@
 
 from decimal import Decimal
 from unittest.mock import AsyncMock, MagicMock
-from uuid import uuid4
 
 import pytest
 
-from src.monitor import PositionMonitor, Position
+from src.monitor import Position, PositionMonitor
 
 
 @pytest.mark.unit
@@ -78,9 +77,11 @@ class TestPositionMonitor:
             entry_price=Decimal("150.00"),
         )
 
-        await position_monitor.update_prices({
-            "AAPL": Decimal("155.00"),
-        })
+        await position_monitor.update_prices(
+            {
+                "AAPL": Decimal("155.00"),
+            }
+        )
 
         position = position_monitor.positions["AAPL"]
         assert position.current_price == Decimal("155.00")
@@ -101,10 +102,12 @@ class TestPositionMonitor:
         )
 
         # Update prices
-        await position_monitor.update_prices({
-            "AAPL": Decimal("155.00"),
-            "MSFT": Decimal("310.00"),
-        })
+        await position_monitor.update_prices(
+            {
+                "AAPL": Decimal("155.00"),
+                "MSFT": Decimal("310.00"),
+            }
+        )
 
         portfolio_value = await position_monitor.get_portfolio_value()
         expected = (Decimal("155.00") * 100) + (Decimal("310.00") * 50)

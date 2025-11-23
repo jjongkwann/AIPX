@@ -4,8 +4,8 @@ Logging package for AIPX.
 Provides structured logging with context management and middleware support.
 """
 
-from .logger import Logger, get_logger, setup_logging
 from .context import LogContext, log_context
+from .logger import Logger, get_logger, setup_logging
 from .middleware import LoggingMiddleware
 
 __all__ = [

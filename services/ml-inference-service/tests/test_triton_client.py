@@ -1,7 +1,9 @@
 """Tests for Triton client."""
-import pytest
+
+from unittest.mock import AsyncMock, Mock, patch
+
 import numpy as np
-from unittest.mock import Mock, AsyncMock, patch
+import pytest
 
 from src.triton_client import TritonClient
 
@@ -9,14 +11,13 @@ from src.triton_client import TritonClient
 @pytest.fixture
 def mock_triton_client():
     """Mock Triton gRPC client."""
-    with patch('tritonclient.grpc.aio.InferenceServerClient') as mock:
+    with patch("tritonclient.grpc.aio.InferenceServerClient") as mock:
         client = Mock()
         client.is_server_live = AsyncMock(return_value=True)
         client.is_server_ready = AsyncMock(return_value=True)
-        client.get_model_repository_index = AsyncMock(return_value=[
-            Mock(name="lstm_price_predictor"),
-            Mock(name="transformer_sentiment")
-        ])
+        client.get_model_repository_index = AsyncMock(
+            return_value=[Mock(name="lstm_price_predictor"), Mock(name="transformer_sentiment")]
+        )
         mock.return_value = client
         yield mock
 
@@ -77,10 +78,12 @@ async def test_analyze_sentiment():
 
     # Mock response
     mock_response = Mock()
-    mock_response.as_numpy = Mock(side_effect=[
-        np.array([0.78]),  # sentiment
-        np.array([0.92])   # confidence
-    ])
+    mock_response.as_numpy = Mock(
+        side_effect=[
+            np.array([0.78]),  # sentiment
+            np.array([0.92]),  # confidence
+        ]
+    )
 
     mock_client = AsyncMock()
     mock_client.infer = AsyncMock(return_value=mock_response)
@@ -106,12 +109,14 @@ async def test_ensemble_predict():
 
     # Mock response
     mock_response = Mock()
-    mock_response.as_numpy = Mock(side_effect=[
-        np.array([72000.0]),  # final_prediction
-        np.array([71500.0]),  # price_component
-        np.array([0.78]),     # sentiment_component
-        np.array([0.88])      # confidence
-    ])
+    mock_response.as_numpy = Mock(
+        side_effect=[
+            np.array([72000.0]),  # final_prediction
+            np.array([71500.0]),  # price_component
+            np.array([0.78]),  # sentiment_component
+            np.array([0.88]),  # confidence
+        ]
+    )
 
     mock_client = AsyncMock()
     mock_client.infer = AsyncMock(return_value=mock_response)
@@ -123,11 +128,7 @@ async def test_ensemble_predict():
     news_ids = np.zeros(512, dtype=np.int64)
     attention_mask = np.ones(512, dtype=np.int64)
 
-    result = await client.ensemble_predict(
-        price_features,
-        news_ids,
-        attention_mask
-    )
+    result = await client.ensemble_predict(price_features, news_ids, attention_mask)
 
     assert "final_prediction" in result
     assert "price_component" in result
@@ -143,11 +144,7 @@ async def test_batch_predict_prices():
 
     # Mock response
     mock_response = Mock()
-    mock_response.as_numpy = Mock(return_value=np.array([
-        [71500.0],
-        [72000.0],
-        [71800.0]
-    ]))
+    mock_response.as_numpy = Mock(return_value=np.array([[71500.0], [72000.0], [71800.0]]))
 
     mock_client = AsyncMock()
     mock_client.infer = AsyncMock(return_value=mock_response)
@@ -155,10 +152,7 @@ async def test_batch_predict_prices():
     client.client = mock_client
 
     # Test batch prediction
-    features_batch = [
-        np.random.rand(60, 5).astype(np.float32)
-        for _ in range(3)
-    ]
+    features_batch = [np.random.rand(60, 5).astype(np.float32) for _ in range(3)]
 
     results = await client.batch_predict_prices(features_batch)
 
@@ -193,12 +187,8 @@ async def test_get_model_metadata():
     mock_metadata.name = "lstm_price_predictor"
     mock_metadata.versions = ["1"]
     mock_metadata.platform = "pytorch_libtorch"
-    mock_metadata.inputs = [
-        Mock(name="input__0", datatype="FP32", shape=[60, 5])
-    ]
-    mock_metadata.outputs = [
-        Mock(name="output__0", datatype="FP32", shape=[1])
-    ]
+    mock_metadata.inputs = [Mock(name="input__0", datatype="FP32", shape=[60, 5])]
+    mock_metadata.outputs = [Mock(name="output__0", datatype="FP32", shape=[1])]
 
     mock_config = Mock()
     mock_config.config.max_batch_size = 32

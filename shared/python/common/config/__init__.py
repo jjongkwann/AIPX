@@ -4,9 +4,9 @@ Configuration package for AIPX.
 Provides environment-based configuration management with validation.
 """
 
-from .settings import Settings
 from .env import EnvConfig, get_env_config
-from .validators import validate_config, ConfigValidationError
+from .settings import Settings
+from .validators import ConfigValidationError, validate_config
 
 __all__ = [
     "Settings",

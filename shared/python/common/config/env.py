@@ -1,8 +1,8 @@
 """Environment configuration for AIPX."""
 
 import os
-from typing import Optional, Any
 from pathlib import Path
+from typing import Optional
 
 
 class EnvConfig:

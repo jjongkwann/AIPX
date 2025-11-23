@@ -1,18 +1,16 @@
 """Performance metrics calculation"""
 
+from typing import Dict, List, Optional
+
 import numpy as np
 import pandas as pd
-from typing import List, Dict, Optional
 
 
 class PerformanceMetrics:
     """Calculate performance metrics for backtesting results"""
 
     @staticmethod
-    def calculate_cagr(
-        equity_curve: List[Dict],
-        years: Optional[float] = None
-    ) -> float:
+    def calculate_cagr(equity_curve: List[Dict], years: Optional[float] = None) -> float:
         """
         Calculate Compound Annual Growth Rate
 
@@ -26,16 +24,16 @@ class PerformanceMetrics:
         if not equity_curve or len(equity_curve) < 2:
             return 0.0
 
-        initial_equity = equity_curve[0]['equity']
-        final_equity = equity_curve[-1]['equity']
+        initial_equity = equity_curve[0]["equity"]
+        final_equity = equity_curve[-1]["equity"]
 
         if initial_equity <= 0:
             return 0.0
 
         if years is None:
             # Calculate years from timestamps
-            start_date = pd.to_datetime(equity_curve[0]['timestamp'])
-            end_date = pd.to_datetime(equity_curve[-1]['timestamp'])
+            start_date = pd.to_datetime(equity_curve[0]["timestamp"])
+            end_date = pd.to_datetime(equity_curve[-1]["timestamp"])
             years = (end_date - start_date).days / 365.25
 
         if years <= 0:
@@ -58,7 +56,7 @@ class PerformanceMetrics:
         if not equity_curve:
             return 0.0
 
-        equity_values = np.array([point['equity'] for point in equity_curve])
+        equity_values = np.array([point["equity"] for point in equity_curve])
 
         # Calculate running maximum
         running_max = np.maximum.accumulate(equity_values)
@@ -71,9 +69,7 @@ class PerformanceMetrics:
 
     @staticmethod
     def calculate_sharpe_ratio(
-        equity_curve: List[Dict],
-        risk_free_rate: float = 0.02,
-        periods_per_year: int = 252
+        equity_curve: List[Dict], risk_free_rate: float = 0.02, periods_per_year: int = 252
     ) -> float:
         """
         Calculate Sharpe Ratio
@@ -89,7 +85,7 @@ class PerformanceMetrics:
         if not equity_curve or len(equity_curve) < 2:
             return 0.0
 
-        equity_values = np.array([point['equity'] for point in equity_curve])
+        equity_values = np.array([point["equity"] for point in equity_curve])
         returns = np.diff(equity_values) / equity_values[:-1]
 
         if len(returns) == 0:
@@ -106,9 +102,7 @@ class PerformanceMetrics:
 
     @staticmethod
     def calculate_sortino_ratio(
-        equity_curve: List[Dict],
-        risk_free_rate: float = 0.02,
-        periods_per_year: int = 252
+        equity_curve: List[Dict], risk_free_rate: float = 0.02, periods_per_year: int = 252
     ) -> float:
         """
         Calculate Sortino Ratio (uses downside deviation)
@@ -124,7 +118,7 @@ class PerformanceMetrics:
         if not equity_curve or len(equity_curve) < 2:
             return 0.0
 
-        equity_values = np.array([point['equity'] for point in equity_curve])
+        equity_values = np.array([point["equity"] for point in equity_curve])
         returns = np.diff(equity_values) / equity_values[:-1]
 
         if len(returns) == 0:
@@ -135,12 +129,12 @@ class PerformanceMetrics:
         # Calculate downside deviation (only negative returns)
         negative_returns = returns[returns < 0]
         if len(negative_returns) == 0:
-            return float('inf')  # Perfect - no downside
+            return float("inf")  # Perfect - no downside
 
         downside_std = np.std(negative_returns, ddof=1) * np.sqrt(periods_per_year)
 
         if downside_std == 0:
-            return float('inf')
+            return float("inf")
 
         sortino = (mean_return - risk_free_rate) / downside_std
         return float(sortino)
@@ -160,7 +154,7 @@ class PerformanceMetrics:
             return 0.0
 
         # Filter sell trades (which have pnl)
-        closed_trades = [t for t in trades if hasattr(t, 'pnl') and t.pnl is not None]
+        closed_trades = [t for t in trades if hasattr(t, "pnl") and t.pnl is not None]
 
         if not closed_trades:
             return 0.0
@@ -183,7 +177,7 @@ class PerformanceMetrics:
         if not trades:
             return 0.0
 
-        closed_trades = [t for t in trades if hasattr(t, 'pnl') and t.pnl is not None]
+        closed_trades = [t for t in trades if hasattr(t, "pnl") and t.pnl is not None]
 
         if not closed_trades:
             return 0.0
@@ -192,7 +186,7 @@ class PerformanceMetrics:
         gross_loss = abs(sum(t.pnl for t in closed_trades if t.pnl < 0))
 
         if gross_loss == 0:
-            return float('inf') if gross_profit > 0 else 0.0
+            return float("inf") if gross_profit > 0 else 0.0
 
         return gross_profit / gross_loss
 
@@ -202,7 +196,7 @@ class PerformanceMetrics:
         if not trades:
             return 0.0
 
-        closed_trades = [t for t in trades if hasattr(t, 'pnl') and t.pnl is not None]
+        closed_trades = [t for t in trades if hasattr(t, "pnl") and t.pnl is not None]
         winning_trades = [t.pnl for t in closed_trades if t.pnl > 0]
 
         if not winning_trades:
@@ -216,7 +210,7 @@ class PerformanceMetrics:
         if not trades:
             return 0.0
 
-        closed_trades = [t for t in trades if hasattr(t, 'pnl') and t.pnl is not None]
+        closed_trades = [t for t in trades if hasattr(t, "pnl") and t.pnl is not None]
         losing_trades = [t.pnl for t in closed_trades if t.pnl < 0]
 
         if not losing_trades:
@@ -225,23 +219,15 @@ class PerformanceMetrics:
         return float(np.mean(losing_trades))
 
     @staticmethod
-    def calculate_all_metrics(
-        equity_curve: List[Dict],
-        trades: List,
-        risk_free_rate: float = 0.02
-    ) -> Dict[str, float]:
+    def calculate_all_metrics(equity_curve: List[Dict], trades: List, risk_free_rate: float = 0.02) -> Dict[str, float]:
         """Calculate all performance metrics at once"""
         return {
-            'cagr': PerformanceMetrics.calculate_cagr(equity_curve),
-            'mdd': PerformanceMetrics.calculate_mdd(equity_curve),
-            'sharpe_ratio': PerformanceMetrics.calculate_sharpe_ratio(
-                equity_curve, risk_free_rate
-            ),
-            'sortino_ratio': PerformanceMetrics.calculate_sortino_ratio(
-                equity_curve, risk_free_rate
-            ),
-            'win_rate': PerformanceMetrics.calculate_win_rate(trades),
-            'profit_factor': PerformanceMetrics.calculate_profit_factor(trades),
-            'average_win': PerformanceMetrics.calculate_average_win(trades),
-            'average_loss': PerformanceMetrics.calculate_average_loss(trades),
+            "cagr": PerformanceMetrics.calculate_cagr(equity_curve),
+            "mdd": PerformanceMetrics.calculate_mdd(equity_curve),
+            "sharpe_ratio": PerformanceMetrics.calculate_sharpe_ratio(equity_curve, risk_free_rate),
+            "sortino_ratio": PerformanceMetrics.calculate_sortino_ratio(equity_curve, risk_free_rate),
+            "win_rate": PerformanceMetrics.calculate_win_rate(trades),
+            "profit_factor": PerformanceMetrics.calculate_profit_factor(trades),
+            "average_win": PerformanceMetrics.calculate_average_win(trades),
+            "average_loss": PerformanceMetrics.calculate_average_loss(trades),
         }

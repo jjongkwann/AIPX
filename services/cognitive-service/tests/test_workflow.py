@@ -107,8 +107,8 @@ class TestWorkflowManager:
         # Use side_effect to return proper structured objects for each call
         # First call: user_profile agent extracts profile
         # Second call: supervisor decides to end
-        from src.agents.user_profile_agent import ExtractedProfile
         from src.agents.supervisor import SupervisorDecision
+        from src.agents.user_profile_agent import ExtractedProfile
 
         profile_response = ExtractedProfile(
             risk_tolerance="moderate",

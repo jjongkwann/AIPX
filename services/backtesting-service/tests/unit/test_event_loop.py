@@ -1,8 +1,9 @@
 """Unit tests for Event Loop"""
 
+from datetime import datetime
+
 import pytest
-from datetime import datetime, timedelta
-from src.engine.event_loop import EventLoop, Event, EventType
+from src.engine.event_loop import Event, EventLoop, EventType
 
 
 class TestEvent:
@@ -11,27 +12,17 @@ class TestEvent:
     def test_event_creation(self):
         """Test creating a valid event"""
         timestamp = datetime(2024, 1, 1, 9, 0)
-        event = Event(
-            timestamp=timestamp,
-            event_type=EventType.MARKET_DATA,
-            data={'symbol': '005930', 'price': 71000}
-        )
+        event = Event(timestamp=timestamp, event_type=EventType.MARKET_DATA, data={"symbol": "005930", "price": 71000})
 
         assert event.timestamp == timestamp
         assert event.event_type == EventType.MARKET_DATA
-        assert event.data['symbol'] == '005930'
-        assert event.data['price'] == 71000
+        assert event.data["symbol"] == "005930"
+        assert event.data["price"] == 71000
 
     def test_event_ordering_by_timestamp(self):
         """Test that events are ordered by timestamp"""
-        event1 = Event(
-            timestamp=datetime(2024, 1, 1, 9, 0),
-            event_type=EventType.MARKET_DATA
-        )
-        event2 = Event(
-            timestamp=datetime(2024, 1, 1, 9, 1),
-            event_type=EventType.ORDER
-        )
+        event1 = Event(timestamp=datetime(2024, 1, 1, 9, 0), event_type=EventType.MARKET_DATA)
+        event2 = Event(timestamp=datetime(2024, 1, 1, 9, 1), event_type=EventType.ORDER)
 
         assert event1 < event2
         assert not event1 > event2
@@ -41,7 +32,7 @@ class TestEvent:
         with pytest.raises(TypeError):
             Event(
                 timestamp="2024-01-01",  # String instead of datetime
-                event_type=EventType.MARKET_DATA
+                event_type=EventType.MARKET_DATA,
             )
 
     def test_event_invalid_type(self):
@@ -49,7 +40,7 @@ class TestEvent:
         with pytest.raises(TypeError):
             Event(
                 timestamp=datetime(2024, 1, 1),
-                event_type="market_data"  # String instead of enum
+                event_type="market_data",  # String instead of enum
             )
 
 
@@ -75,10 +66,7 @@ class TestEventLoop:
         loop.register_handler(EventType.MARKET_DATA, handler)
 
         # Add and process event
-        event = Event(
-            timestamp=datetime(2024, 1, 1),
-            event_type=EventType.MARKET_DATA
-        )
+        event = Event(timestamp=datetime(2024, 1, 1), event_type=EventType.MARKET_DATA)
         loop.add_event(event)
         loop.process_events()
 
@@ -91,24 +79,21 @@ class TestEventLoop:
         calls = []
 
         def handler1(event):
-            calls.append('handler1')
+            calls.append("handler1")
 
         def handler2(event):
-            calls.append('handler2')
+            calls.append("handler2")
 
         loop.register_handler(EventType.MARKET_DATA, handler1)
         loop.register_handler(EventType.MARKET_DATA, handler2)
 
-        event = Event(
-            timestamp=datetime(2024, 1, 1),
-            event_type=EventType.MARKET_DATA
-        )
+        event = Event(timestamp=datetime(2024, 1, 1), event_type=EventType.MARKET_DATA)
         loop.add_event(event)
         loop.process_events()
 
         assert len(calls) == 2
-        assert 'handler1' in calls
-        assert 'handler2' in calls
+        assert "handler1" in calls
+        assert "handler2" in calls
 
     def test_register_handler_invalid_type(self):
         """Test that registering handler with invalid type raises error"""
@@ -128,10 +113,7 @@ class TestEventLoop:
         """Test adding events to queue"""
         loop = EventLoop()
 
-        event = Event(
-            timestamp=datetime(2024, 1, 1),
-            event_type=EventType.MARKET_DATA
-        )
+        event = Event(timestamp=datetime(2024, 1, 1), event_type=EventType.MARKET_DATA)
         loop.add_event(event)
 
         assert loop.queue_size == 1
@@ -156,18 +138,9 @@ class TestEventLoop:
         loop.register_handler(EventType.SIGNAL, handler)
 
         # Add events in random order
-        event2 = Event(
-            timestamp=datetime(2024, 1, 1, 9, 2),
-            event_type=EventType.ORDER
-        )
-        event1 = Event(
-            timestamp=datetime(2024, 1, 1, 9, 0),
-            event_type=EventType.MARKET_DATA
-        )
-        event3 = Event(
-            timestamp=datetime(2024, 1, 1, 9, 1),
-            event_type=EventType.SIGNAL
-        )
+        event2 = Event(timestamp=datetime(2024, 1, 1, 9, 2), event_type=EventType.ORDER)
+        event1 = Event(timestamp=datetime(2024, 1, 1, 9, 0), event_type=EventType.MARKET_DATA)
+        event3 = Event(timestamp=datetime(2024, 1, 1, 9, 1), event_type=EventType.SIGNAL)
 
         loop.add_event(event2)
         loop.add_event(event1)
@@ -178,11 +151,7 @@ class TestEventLoop:
         loop.process_events()
 
         # Should be processed in timestamp order
-        assert processed_order == [
-            datetime(2024, 1, 1, 9, 0),
-            datetime(2024, 1, 1, 9, 1),
-            datetime(2024, 1, 1, 9, 2)
-        ]
+        assert processed_order == [datetime(2024, 1, 1, 9, 0), datetime(2024, 1, 1, 9, 1), datetime(2024, 1, 1, 9, 2)]
 
     def test_duplicate_timestamps(self):
         """Test handling events with duplicate timestamps"""
@@ -213,10 +182,7 @@ class TestEventLoop:
         loop = EventLoop()
 
         for i in range(5):
-            event = Event(
-                timestamp=datetime(2024, 1, 1, 9, i),
-                event_type=EventType.MARKET_DATA
-            )
+            event = Event(timestamp=datetime(2024, 1, 1, 9, i), event_type=EventType.MARKET_DATA)
             loop.add_event(event)
 
         count = loop.process_events()
@@ -239,10 +205,7 @@ class TestEventLoop:
 
         loop.register_handler(EventType.MARKET_DATA, faulty_handler)
 
-        event = Event(
-            timestamp=datetime(2024, 1, 1),
-            event_type=EventType.MARKET_DATA
-        )
+        event = Event(timestamp=datetime(2024, 1, 1), event_type=EventType.MARKET_DATA)
         loop.add_event(event)
 
         # Should raise the error
@@ -255,10 +218,7 @@ class TestEventLoop:
 
         # Add many events
         for i in range(10):
-            event = Event(
-                timestamp=datetime(2024, 1, 1, 9, i),
-                event_type=EventType.MARKET_DATA
-            )
+            event = Event(timestamp=datetime(2024, 1, 1, 9, i), event_type=EventType.MARKET_DATA)
             loop.add_event(event)
 
         # Stop after processing first event
@@ -278,10 +238,7 @@ class TestEventLoop:
         loop = EventLoop()
 
         for i in range(5):
-            event = Event(
-                timestamp=datetime(2024, 1, 1, 9, i),
-                event_type=EventType.MARKET_DATA
-            )
+            event = Event(timestamp=datetime(2024, 1, 1, 9, i), event_type=EventType.MARKET_DATA)
             loop.add_event(event)
 
         assert loop.queue_size == 5
@@ -306,18 +263,9 @@ class TestEventLoop:
         loop.register_handler(EventType.ORDER, order_handler)
 
         # Add various event types
-        loop.add_event(Event(
-            timestamp=datetime(2024, 1, 1, 9, 0),
-            event_type=EventType.MARKET_DATA
-        ))
-        loop.add_event(Event(
-            timestamp=datetime(2024, 1, 1, 9, 1),
-            event_type=EventType.ORDER
-        ))
-        loop.add_event(Event(
-            timestamp=datetime(2024, 1, 1, 9, 2),
-            event_type=EventType.MARKET_DATA
-        ))
+        loop.add_event(Event(timestamp=datetime(2024, 1, 1, 9, 0), event_type=EventType.MARKET_DATA))
+        loop.add_event(Event(timestamp=datetime(2024, 1, 1, 9, 1), event_type=EventType.ORDER))
+        loop.add_event(Event(timestamp=datetime(2024, 1, 1, 9, 2), event_type=EventType.MARKET_DATA))
 
         loop.process_events()
 

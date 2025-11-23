@@ -1,20 +1,23 @@
 """Matching engine with realistic latency and slippage"""
 
-import numpy as np
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from enum import Enum
 from typing import Dict, List, Optional
 
+import numpy as np
+
 
 class OrderType(Enum):
     """Order types"""
+
     MARKET = "market"
     LIMIT = "limit"
 
 
 class OrderSide(Enum):
     """Order sides"""
+
     BUY = "buy"
     SELL = "sell"
 
@@ -22,6 +25,7 @@ class OrderSide(Enum):
 @dataclass
 class Order:
     """Order representation"""
+
     symbol: str
     side: OrderSide
     quantity: int
@@ -33,6 +37,7 @@ class Order:
 @dataclass
 class Fill:
     """Fill (execution) representation"""
+
     order: Order
     fill_price: float
     fill_quantity: int
@@ -55,7 +60,7 @@ class MatchingEngine:
         latency_std_ms: float = 20.0,
         slippage_mean_pct: float = 0.05,
         slippage_std_pct: float = 0.02,
-        random_seed: Optional[int] = None
+        random_seed: Optional[int] = None,
     ):
         self.latency_mean_ms = latency_mean_ms
         self.latency_std_ms = latency_std_ms
@@ -63,11 +68,7 @@ class MatchingEngine:
         self.slippage_std_pct = slippage_std_pct
         self._rng = np.random.RandomState(random_seed)
 
-    def match_order(
-        self,
-        order: Order,
-        order_book: Dict[str, List[Dict[str, float]]]
-    ) -> Optional[Fill]:
+    def match_order(self, order: Order, order_book: Dict[str, List[Dict[str, float]]]) -> Optional[Fill]:
         """
         Match an order against the order book
 
@@ -107,7 +108,7 @@ class MatchingEngine:
             fill_quantity=fill_quantity,
             fill_timestamp=fill_timestamp,
             slippage=slippage,
-            latency=latency
+            latency=latency,
         )
 
     def _simulate_latency(self) -> float:
@@ -115,62 +116,44 @@ class MatchingEngine:
         latency = self._rng.normal(self.latency_mean_ms, self.latency_std_ms)
         return max(0.0, latency)  # Ensure non-negative
 
-    def _calculate_fill_price(
-        self,
-        order: Order,
-        order_book: Dict[str, List[Dict[str, float]]]
-    ) -> Optional[float]:
+    def _calculate_fill_price(self, order: Order, order_book: Dict[str, List[Dict[str, float]]]) -> Optional[float]:
         """Calculate fill price with slippage"""
         if order.side == OrderSide.BUY:
             # Buy from asks (take liquidity from sellers)
-            asks = order_book.get('asks', [])
+            asks = order_book.get("asks", [])
             if not asks:
                 return None
 
             # Get best ask (lowest price)
-            best_ask = min(asks, key=lambda x: x['price'])
-            base_price = best_ask['price']
+            best_ask = min(asks, key=lambda x: x["price"])
+            base_price = best_ask["price"]
 
             # Apply slippage (buy at higher price)
-            slippage_pct = self._rng.normal(
-                self.slippage_mean_pct,
-                self.slippage_std_pct
-            )
+            slippage_pct = self._rng.normal(self.slippage_mean_pct, self.slippage_std_pct)
             fill_price = base_price * (1 + slippage_pct / 100)
 
         else:  # SELL
             # Sell to bids (take liquidity from buyers)
-            bids = order_book.get('bids', [])
+            bids = order_book.get("bids", [])
             if not bids:
                 return None
 
             # Get best bid (highest price)
-            best_bid = max(bids, key=lambda x: x['price'])
-            base_price = best_bid['price']
+            best_bid = max(bids, key=lambda x: x["price"])
+            base_price = best_bid["price"]
 
             # Apply slippage (sell at lower price)
-            slippage_pct = self._rng.normal(
-                self.slippage_mean_pct,
-                self.slippage_std_pct
-            )
+            slippage_pct = self._rng.normal(self.slippage_mean_pct, self.slippage_std_pct)
             fill_price = base_price * (1 - slippage_pct / 100)
 
         return max(0.0, fill_price)  # Ensure non-negative
 
-    def _calculate_fill_quantity(
-        self,
-        order: Order,
-        order_book: Dict[str, List[Dict[str, float]]]
-    ) -> int:
+    def _calculate_fill_quantity(self, order: Order, order_book: Dict[str, List[Dict[str, float]]]) -> int:
         """Calculate fill quantity (handle partial fills)"""
         if order.side == OrderSide.BUY:
-            available_liquidity = sum(
-                ask['quantity'] for ask in order_book.get('asks', [])
-            )
+            available_liquidity = sum(ask["quantity"] for ask in order_book.get("asks", []))
         else:
-            available_liquidity = sum(
-                bid['quantity'] for bid in order_book.get('bids', [])
-            )
+            available_liquidity = sum(bid["quantity"] for bid in order_book.get("bids", []))
 
         # Return minimum of order quantity and available liquidity
         return min(order.quantity, available_liquidity) if available_liquidity > 0 else 0

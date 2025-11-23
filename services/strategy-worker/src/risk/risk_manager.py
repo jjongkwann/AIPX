@@ -114,9 +114,7 @@ class RiskManager:
             )
 
         # 2. Check position size limit
-        current_symbol_position = Decimal(
-            current_positions.get(symbol, {}).get("value", 0)
-        )
+        current_symbol_position = Decimal(current_positions.get(symbol, {}).get("value", 0))
 
         # Calculate new position after order execution
         if side == "BUY":
@@ -150,9 +148,7 @@ class RiskManager:
             )
 
         # 3. Check total exposure limit
-        total_exposure = sum(
-            Decimal(pos.get("value", 0)) for pos in current_positions.values()
-        )
+        total_exposure = sum(Decimal(pos.get("value", 0)) for pos in current_positions.values())
 
         if side == "BUY":
             new_total_exposure = total_exposure + order_value

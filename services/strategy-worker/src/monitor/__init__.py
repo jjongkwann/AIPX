@@ -1,5 +1,5 @@
 """Position monitoring package."""
 
-from .position_monitor import PositionMonitor, Position
+from .position_monitor import Position, PositionMonitor
 
 __all__ = ["PositionMonitor", "Position"]

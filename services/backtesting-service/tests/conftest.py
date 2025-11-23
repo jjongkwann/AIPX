@@ -1,15 +1,16 @@
 """Pytest configuration and fixtures"""
 
-import pytest
+from datetime import datetime, timedelta
+
 import numpy as np
 import pandas as pd
-from datetime import datetime, timedelta
+import pytest
 
 
 @pytest.fixture
 def sample_tick_data():
     """Generate synthetic tick data for testing"""
-    dates = pd.date_range('2024-01-01', '2024-12-31', freq='D')
+    dates = pd.date_range("2024-01-01", "2024-12-31", freq="D")
     np.random.seed(42)
 
     # Generate price series with trend and noise
@@ -19,48 +20,47 @@ def sample_tick_data():
     price_multipliers = np.exp(np.cumsum(returns))
     prices = base_price * price_multipliers
 
-    return pd.DataFrame({
-        'timestamp': dates,
-        'symbol': '005930',  # Samsung Electronics
-        'open': prices * 0.99,
-        'high': prices * 1.02,
-        'low': prices * 0.98,
-        'close': prices,
-        'volume': np.random.randint(1000000, 10000000, len(dates))
-    })
+    return pd.DataFrame(
+        {
+            "timestamp": dates,
+            "symbol": "005930",  # Samsung Electronics
+            "open": prices * 0.99,
+            "high": prices * 1.02,
+            "low": prices * 0.98,
+            "close": prices,
+            "volume": np.random.randint(1000000, 10000000, len(dates)),
+        }
+    )
 
 
 @pytest.fixture
 def sample_orderbook():
     """Generate sample order book"""
     return {
-        'bids': [
-            {'price': 71000, 'quantity': 100},
-            {'price': 70900, 'quantity': 200},
-            {'price': 70800, 'quantity': 150},
+        "bids": [
+            {"price": 71000, "quantity": 100},
+            {"price": 70900, "quantity": 200},
+            {"price": 70800, "quantity": 150},
         ],
-        'asks': [
-            {'price': 71100, 'quantity': 100},
-            {'price': 71200, 'quantity': 200},
-            {'price': 71300, 'quantity': 150},
-        ]
+        "asks": [
+            {"price": 71100, "quantity": 100},
+            {"price": 71200, "quantity": 200},
+            {"price": 71300, "quantity": 150},
+        ],
     }
 
 
 @pytest.fixture
 def empty_orderbook():
     """Generate empty order book"""
-    return {
-        'bids': [],
-        'asks': []
-    }
+    return {"bids": [], "asks": []}
 
 
 @pytest.fixture
 def sample_equity_curve():
     """Generate sample equity curve for testing metrics"""
     np.random.seed(42)
-    dates = pd.date_range('2024-01-01', '2024-12-31', freq='D')
+    dates = pd.date_range("2024-01-01", "2024-12-31", freq="D")
     initial_equity = 10000000  # 10M KRW
 
     # Generate equity curve with some growth and volatility
@@ -70,12 +70,14 @@ def sample_equity_curve():
 
     equity_curve = []
     for i, date in enumerate(dates):
-        equity_curve.append({
-            'timestamp': date,
-            'equity': equity_values[i],
-            'cash': equity_values[i] * 0.3,  # 30% cash
-            'position_value': equity_values[i] * 0.7  # 70% in positions
-        })
+        equity_curve.append(
+            {
+                "timestamp": date,
+                "equity": equity_values[i],
+                "cash": equity_values[i] * 0.3,  # 30% cash
+                "position_value": equity_values[i] * 0.7,  # 70% in positions
+            }
+        )
 
     return equity_curve
 
@@ -92,26 +94,30 @@ def sample_trades():
     np.random.seed(42)
     for i in range(10):
         # Buy trade
-        trades.append(Trade(
-            timestamp=base_time + timedelta(days=i*2),
-            symbol='005930',
-            side='buy',
-            quantity=10,
-            price=100000 + i * 1000,
-            commission=300
-        ))
+        trades.append(
+            Trade(
+                timestamp=base_time + timedelta(days=i * 2),
+                symbol="005930",
+                side="buy",
+                quantity=10,
+                price=100000 + i * 1000,
+                commission=300,
+            )
+        )
 
         # Sell trade with P&L
         pnl = np.random.randn() * 100000  # Random P&L
-        trades.append(Trade(
-            timestamp=base_time + timedelta(days=i*2+1),
-            symbol='005930',
-            side='sell',
-            quantity=10,
-            price=100000 + i * 1000 + pnl / 10,
-            commission=300,
-            pnl=pnl
-        ))
+        trades.append(
+            Trade(
+                timestamp=base_time + timedelta(days=i * 2 + 1),
+                symbol="005930",
+                side="sell",
+                quantity=10,
+                price=100000 + i * 1000 + pnl / 10,
+                commission=300,
+                pnl=pnl,
+            )
+        )
 
     return trades
 
@@ -122,7 +128,7 @@ def known_returns_data():
     np.random.seed(123)
 
     # Generate 1 year of daily data
-    dates = pd.date_range('2024-01-01', '2024-12-31', freq='D')
+    dates = pd.date_range("2024-01-01", "2024-12-31", freq="D")
     initial_equity = 10000000
 
     # Known parameters
@@ -138,24 +144,26 @@ def known_returns_data():
 
     equity_curve = []
     for i, date in enumerate(dates):
-        equity_curve.append({
-            'timestamp': date,
-            'equity': equity_values[i],
-            'cash': equity_values[i] * 0.2,
-            'position_value': equity_values[i] * 0.8
-        })
+        equity_curve.append(
+            {
+                "timestamp": date,
+                "equity": equity_values[i],
+                "cash": equity_values[i] * 0.2,
+                "position_value": equity_values[i] * 0.8,
+            }
+        )
 
     return {
-        'equity_curve': equity_curve,
-        'expected_annual_return': annual_return,
-        'expected_annual_volatility': annual_volatility
+        "equity_curve": equity_curve,
+        "expected_annual_return": annual_return,
+        "expected_annual_volatility": annual_volatility,
     }
 
 
 @pytest.fixture
 def drawdown_data():
     """Generate data with known drawdown for testing"""
-    dates = pd.date_range('2024-01-01', '2024-12-31', freq='D')
+    dates = pd.date_range("2024-01-01", "2024-12-31", freq="D")
     initial_equity = 10000000
 
     # Create a known drawdown pattern
@@ -177,47 +185,52 @@ def drawdown_data():
 
     equity_curve = []
     for i, date in enumerate(dates):
-        equity_curve.append({
-            'timestamp': date,
-            'equity': equity_values[i],
-            'cash': equity_values[i] * 0.3,
-            'position_value': equity_values[i] * 0.7
-        })
+        equity_curve.append(
+            {
+                "timestamp": date,
+                "equity": equity_values[i],
+                "cash": equity_values[i] * 0.3,
+                "position_value": equity_values[i] * 0.7,
+            }
+        )
 
     return {
-        'equity_curve': equity_curve,
-        'expected_mdd': -20.0  # -20% maximum drawdown
+        "equity_curve": equity_curve,
+        "expected_mdd": -20.0,  # -20% maximum drawdown
     }
 
 
 @pytest.fixture
 def market_data_generator():
     """Factory fixture to generate market data with specific parameters"""
+
     def _generate(
-        start_date='2024-01-01',
-        end_date='2024-12-31',
-        symbol='005930',
+        start_date="2024-01-01",
+        end_date="2024-12-31",
+        symbol="005930",
         initial_price=100000,
         volatility=0.02,
         trend=0.0003,
-        seed=42
+        seed=42,
     ):
         np.random.seed(seed)
-        dates = pd.date_range(start_date, end_date, freq='D')
+        dates = pd.date_range(start_date, end_date, freq="D")
 
         returns = np.random.randn(len(dates)) * volatility + trend
         price_multipliers = np.exp(np.cumsum(returns))
         prices = initial_price * price_multipliers
 
-        return pd.DataFrame({
-            'timestamp': dates,
-            'symbol': symbol,
-            'open': prices * 0.99,
-            'high': prices * 1.02,
-            'low': prices * 0.98,
-            'close': prices,
-            'volume': np.random.randint(1000000, 10000000, len(dates))
-        })
+        return pd.DataFrame(
+            {
+                "timestamp": dates,
+                "symbol": symbol,
+                "open": prices * 0.99,
+                "high": prices * 1.02,
+                "low": prices * 0.98,
+                "close": prices,
+                "volume": np.random.randint(1000000, 10000000, len(dates)),
+            }
+        )
 
     return _generate
 
@@ -225,25 +238,15 @@ def market_data_generator():
 @pytest.fixture
 def orderbook_generator():
     """Factory fixture to generate order books with specific parameters"""
-    def _generate(
-        mid_price=71000,
-        spread=100,
-        depth=5,
-        quantity_per_level=100
-    ):
+
+    def _generate(mid_price=71000, spread=100, depth=5, quantity_per_level=100):
         bids = []
         asks = []
 
         for i in range(depth):
-            bids.append({
-                'price': mid_price - spread/2 - i * spread,
-                'quantity': quantity_per_level * (i + 1)
-            })
-            asks.append({
-                'price': mid_price + spread/2 + i * spread,
-                'quantity': quantity_per_level * (i + 1)
-            })
+            bids.append({"price": mid_price - spread / 2 - i * spread, "quantity": quantity_per_level * (i + 1)})
+            asks.append({"price": mid_price + spread / 2 + i * spread, "quantity": quantity_per_level * (i + 1)})
 
-        return {'bids': bids, 'asks': asks}
+        return {"bids": bids, "asks": asks}
 
     return _generate

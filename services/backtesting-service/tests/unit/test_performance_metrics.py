@@ -1,10 +1,9 @@
 """Unit tests for Performance Metrics"""
 
-import pytest
-import numpy as np
 from datetime import datetime, timedelta
-from src.metrics.performance_metrics import PerformanceMetrics
+
 from src.engine.portfolio import Trade
+from src.metrics.performance_metrics import PerformanceMetrics
 
 
 class TestPerformanceMetrics:
@@ -13,8 +12,8 @@ class TestPerformanceMetrics:
     def test_calculate_cagr_positive(self):
         """Test CAGR calculation with positive returns"""
         equity_curve = [
-            {'timestamp': datetime(2024, 1, 1), 'equity': 10000000},
-            {'timestamp': datetime(2025, 1, 1), 'equity': 11500000}
+            {"timestamp": datetime(2024, 1, 1), "equity": 10000000},
+            {"timestamp": datetime(2025, 1, 1), "equity": 11500000},
         ]
 
         cagr = PerformanceMetrics.calculate_cagr(equity_curve, years=1.0)
@@ -27,10 +26,7 @@ class TestPerformanceMetrics:
         start = datetime(2024, 1, 1)
         end = datetime(2025, 1, 1)
 
-        equity_curve = [
-            {'timestamp': start, 'equity': 10000000},
-            {'timestamp': end, 'equity': 12000000}
-        ]
+        equity_curve = [{"timestamp": start, "equity": 10000000}, {"timestamp": end, "equity": 12000000}]
 
         cagr = PerformanceMetrics.calculate_cagr(equity_curve)
 
@@ -40,8 +36,8 @@ class TestPerformanceMetrics:
     def test_calculate_cagr_negative(self):
         """Test CAGR calculation with loss"""
         equity_curve = [
-            {'timestamp': datetime(2024, 1, 1), 'equity': 10000000},
-            {'timestamp': datetime(2025, 1, 1), 'equity': 9000000}
+            {"timestamp": datetime(2024, 1, 1), "equity": 10000000},
+            {"timestamp": datetime(2025, 1, 1), "equity": 9000000},
         ]
 
         cagr = PerformanceMetrics.calculate_cagr(equity_curve, years=1.0)
@@ -57,9 +53,7 @@ class TestPerformanceMetrics:
 
     def test_calculate_cagr_single_point(self):
         """Test CAGR with single data point"""
-        equity_curve = [
-            {'timestamp': datetime(2024, 1, 1), 'equity': 10000000}
-        ]
+        equity_curve = [{"timestamp": datetime(2024, 1, 1), "equity": 10000000}]
 
         cagr = PerformanceMetrics.calculate_cagr(equity_curve)
 
@@ -67,7 +61,7 @@ class TestPerformanceMetrics:
 
     def test_calculate_mdd_with_drawdown(self, drawdown_data):
         """Test MDD calculation with known drawdown"""
-        mdd = PerformanceMetrics.calculate_mdd(drawdown_data['equity_curve'])
+        mdd = PerformanceMetrics.calculate_mdd(drawdown_data["equity_curve"])
 
         # Should be close to -20%
         assert abs(mdd - (-20.0)) < 1.0
@@ -76,10 +70,9 @@ class TestPerformanceMetrics:
         """Test MDD with continuously increasing equity"""
         equity_curve = []
         for i in range(100):
-            equity_curve.append({
-                'timestamp': datetime(2024, 1, 1) + timedelta(days=i),
-                'equity': 10000000 * (1 + i * 0.01)
-            })
+            equity_curve.append(
+                {"timestamp": datetime(2024, 1, 1) + timedelta(days=i), "equity": 10000000 * (1 + i * 0.01)}
+            )
 
         mdd = PerformanceMetrics.calculate_mdd(equity_curve)
 
@@ -104,10 +97,12 @@ class TestPerformanceMetrics:
         """Test Sharpe ratio with zero volatility"""
         equity_curve = []
         for i in range(100):
-            equity_curve.append({
-                'timestamp': datetime(2024, 1, 1) + timedelta(days=i),
-                'equity': 10000000  # Constant
-            })
+            equity_curve.append(
+                {
+                    "timestamp": datetime(2024, 1, 1) + timedelta(days=i),
+                    "equity": 10000000,  # Constant
+                }
+            )
 
         sharpe = PerformanceMetrics.calculate_sharpe_ratio(equity_curve)
 
@@ -130,15 +125,17 @@ class TestPerformanceMetrics:
         """Test Sortino ratio with no negative returns"""
         equity_curve = []
         for i in range(100):
-            equity_curve.append({
-                'timestamp': datetime(2024, 1, 1) + timedelta(days=i),
-                'equity': 10000000 * (1 + i * 0.01)  # Only positive returns
-            })
+            equity_curve.append(
+                {
+                    "timestamp": datetime(2024, 1, 1) + timedelta(days=i),
+                    "equity": 10000000 * (1 + i * 0.01),  # Only positive returns
+                }
+            )
 
         sortino = PerformanceMetrics.calculate_sortino_ratio(equity_curve)
 
         # Should be infinite (no downside)
-        assert sortino == float('inf')
+        assert sortino == float("inf")
 
     def test_calculate_sortino_ratio_empty_curve(self):
         """Test Sortino ratio with empty curve"""
@@ -152,12 +149,12 @@ class TestPerformanceMetrics:
         for i in range(10):
             trade = Trade(
                 timestamp=datetime(2024, 1, 1) + timedelta(days=i),
-                symbol='005930',
-                side='sell',
+                symbol="005930",
+                side="sell",
                 quantity=10,
                 price=71000,
                 commission=300,
-                pnl=10000  # All positive
+                pnl=10000,  # All positive
             )
             trades.append(trade)
 
@@ -171,12 +168,12 @@ class TestPerformanceMetrics:
         for i in range(10):
             trade = Trade(
                 timestamp=datetime(2024, 1, 1) + timedelta(days=i),
-                symbol='005930',
-                side='sell',
+                symbol="005930",
+                side="sell",
                 quantity=10,
                 price=71000,
                 commission=300,
-                pnl=-10000  # All negative
+                pnl=-10000,  # All negative
             )
             trades.append(trade)
 
@@ -202,25 +199,22 @@ class TestPerformanceMetrics:
         trades = []
 
         # Add buy trade (no P&L)
-        trades.append(Trade(
-            timestamp=datetime(2024, 1, 1),
-            symbol='005930',
-            side='buy',
-            quantity=10,
-            price=70000,
-            commission=300
-        ))
+        trades.append(
+            Trade(timestamp=datetime(2024, 1, 1), symbol="005930", side="buy", quantity=10, price=70000, commission=300)
+        )
 
         # Add sell trade (with P&L)
-        trades.append(Trade(
-            timestamp=datetime(2024, 1, 2),
-            symbol='005930',
-            side='sell',
-            quantity=10,
-            price=72000,
-            commission=300,
-            pnl=10000
-        ))
+        trades.append(
+            Trade(
+                timestamp=datetime(2024, 1, 2),
+                symbol="005930",
+                side="sell",
+                quantity=10,
+                price=72000,
+                commission=300,
+                pnl=10000,
+            )
+        )
 
         win_rate = PerformanceMetrics.calculate_win_rate(trades)
 
@@ -233,27 +227,31 @@ class TestPerformanceMetrics:
 
         # 3 winning trades: +30000
         for i in range(3):
-            trades.append(Trade(
-                timestamp=datetime(2024, 1, 1) + timedelta(days=i),
-                symbol='005930',
-                side='sell',
-                quantity=10,
-                price=71000,
-                commission=300,
-                pnl=10000
-            ))
+            trades.append(
+                Trade(
+                    timestamp=datetime(2024, 1, 1) + timedelta(days=i),
+                    symbol="005930",
+                    side="sell",
+                    quantity=10,
+                    price=71000,
+                    commission=300,
+                    pnl=10000,
+                )
+            )
 
         # 2 losing trades: -10000
         for i in range(2):
-            trades.append(Trade(
-                timestamp=datetime(2024, 1, 1) + timedelta(days=i+3),
-                symbol='005930',
-                side='sell',
-                quantity=10,
-                price=71000,
-                commission=300,
-                pnl=-5000
-            ))
+            trades.append(
+                Trade(
+                    timestamp=datetime(2024, 1, 1) + timedelta(days=i + 3),
+                    symbol="005930",
+                    side="sell",
+                    quantity=10,
+                    price=71000,
+                    commission=300,
+                    pnl=-5000,
+                )
+            )
 
         profit_factor = PerformanceMetrics.calculate_profit_factor(trades)
 
@@ -264,34 +262,38 @@ class TestPerformanceMetrics:
         """Test profit factor with no losing trades"""
         trades = []
         for i in range(5):
-            trades.append(Trade(
-                timestamp=datetime(2024, 1, 1) + timedelta(days=i),
-                symbol='005930',
-                side='sell',
-                quantity=10,
-                price=71000,
-                commission=300,
-                pnl=10000
-            ))
+            trades.append(
+                Trade(
+                    timestamp=datetime(2024, 1, 1) + timedelta(days=i),
+                    symbol="005930",
+                    side="sell",
+                    quantity=10,
+                    price=71000,
+                    commission=300,
+                    pnl=10000,
+                )
+            )
 
         profit_factor = PerformanceMetrics.calculate_profit_factor(trades)
 
         # Should be infinite
-        assert profit_factor == float('inf')
+        assert profit_factor == float("inf")
 
     def test_calculate_profit_factor_no_wins(self):
         """Test profit factor with no winning trades"""
         trades = []
         for i in range(5):
-            trades.append(Trade(
-                timestamp=datetime(2024, 1, 1) + timedelta(days=i),
-                symbol='005930',
-                side='sell',
-                quantity=10,
-                price=71000,
-                commission=300,
-                pnl=-10000
-            ))
+            trades.append(
+                Trade(
+                    timestamp=datetime(2024, 1, 1) + timedelta(days=i),
+                    symbol="005930",
+                    side="sell",
+                    quantity=10,
+                    price=71000,
+                    commission=300,
+                    pnl=-10000,
+                )
+            )
 
         profit_factor = PerformanceMetrics.calculate_profit_factor(trades)
 
@@ -315,15 +317,17 @@ class TestPerformanceMetrics:
         """Test average win with no winning trades"""
         trades = []
         for i in range(5):
-            trades.append(Trade(
-                timestamp=datetime(2024, 1, 1) + timedelta(days=i),
-                symbol='005930',
-                side='sell',
-                quantity=10,
-                price=71000,
-                commission=300,
-                pnl=-10000
-            ))
+            trades.append(
+                Trade(
+                    timestamp=datetime(2024, 1, 1) + timedelta(days=i),
+                    symbol="005930",
+                    side="sell",
+                    quantity=10,
+                    price=71000,
+                    commission=300,
+                    pnl=-10000,
+                )
+            )
 
         avg_win = PerformanceMetrics.calculate_average_win(trades)
 
@@ -340,15 +344,17 @@ class TestPerformanceMetrics:
         """Test average loss with no losing trades"""
         trades = []
         for i in range(5):
-            trades.append(Trade(
-                timestamp=datetime(2024, 1, 1) + timedelta(days=i),
-                symbol='005930',
-                side='sell',
-                quantity=10,
-                price=71000,
-                commission=300,
-                pnl=10000
-            ))
+            trades.append(
+                Trade(
+                    timestamp=datetime(2024, 1, 1) + timedelta(days=i),
+                    symbol="005930",
+                    side="sell",
+                    quantity=10,
+                    price=71000,
+                    commission=300,
+                    pnl=10000,
+                )
+            )
 
         avg_loss = PerformanceMetrics.calculate_average_loss(trades)
 
@@ -356,20 +362,17 @@ class TestPerformanceMetrics:
 
     def test_calculate_all_metrics(self, sample_equity_curve, sample_trades):
         """Test calculating all metrics at once"""
-        metrics = PerformanceMetrics.calculate_all_metrics(
-            sample_equity_curve,
-            sample_trades
-        )
+        metrics = PerformanceMetrics.calculate_all_metrics(sample_equity_curve, sample_trades)
 
         # Check all metrics are present
-        assert 'cagr' in metrics
-        assert 'mdd' in metrics
-        assert 'sharpe_ratio' in metrics
-        assert 'sortino_ratio' in metrics
-        assert 'win_rate' in metrics
-        assert 'profit_factor' in metrics
-        assert 'average_win' in metrics
-        assert 'average_loss' in metrics
+        assert "cagr" in metrics
+        assert "mdd" in metrics
+        assert "sharpe_ratio" in metrics
+        assert "sortino_ratio" in metrics
+        assert "win_rate" in metrics
+        assert "profit_factor" in metrics
+        assert "average_win" in metrics
+        assert "average_loss" in metrics
 
         # Check all are numeric
         for key, value in metrics.items():
@@ -377,10 +380,7 @@ class TestPerformanceMetrics:
 
     def test_sharpe_ratio_with_known_data(self, known_returns_data):
         """Test Sharpe ratio matches expected value with known data"""
-        sharpe = PerformanceMetrics.calculate_sharpe_ratio(
-            known_returns_data['equity_curve'],
-            risk_free_rate=0.02
-        )
+        sharpe = PerformanceMetrics.calculate_sharpe_ratio(known_returns_data["equity_curve"], risk_free_rate=0.02)
 
         # Should be positive (returns > risk-free rate)
         assert sharpe > 0

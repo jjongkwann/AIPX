@@ -4,7 +4,7 @@ import structlog
 from langchain_core.messages import AIMessage
 from pydantic import BaseModel, Field
 
-from src.graph.state import ConversationState, MarketAnalysisResult
+from src.graph.state import ConversationState
 from src.services.llm_service import LLMService
 
 logger = structlog.get_logger()
@@ -18,9 +18,7 @@ class MarketAnalysis(BaseModel):
         default_factory=list, description="Recommended sectors based on market conditions"
     )
     analysis: str = Field(..., description="Detailed market analysis text")
-    confidence: float = Field(
-        default=0.0, ge=0.0, le=1.0, description="Analysis confidence score"
-    )
+    confidence: float = Field(default=0.0, ge=0.0, le=1.0, description="Analysis confidence score")
     key_points: list[str] = Field(default_factory=list, description="Key analysis points")
 
 
@@ -84,7 +82,7 @@ Risk Tolerance Mapping:
             analysis_prompt = f"""Analyze current market conditions for an investor with the following profile:
 
 Risk Tolerance: {risk_tolerance}
-Preferred Sectors: {preferred_sectors if preferred_sectors else 'None specified'}
+Preferred Sectors: {preferred_sectors if preferred_sectors else "None specified"}
 Investment Horizon: {investment_horizon}
 
 Provide:
@@ -102,9 +100,7 @@ Note: Use general market knowledge. This is for strategy generation purposes.
             ]
 
             # Get structured analysis
-            analysis = await self.llm_service.invoke_structured(
-                messages=messages, schema=MarketAnalysis
-            )
+            analysis = await self.llm_service.invoke_structured(messages=messages, schema=MarketAnalysis)
 
             logger.info(
                 "market_analysis_complete",
@@ -119,13 +115,13 @@ Note: Use general market knowledge. This is for strategy generation purposes.
 **Sentiment:** {analysis.sentiment.upper()}
 
 **Recommended Sectors:**
-{chr(10).join(f'• {sector}' for sector in analysis.recommended_sectors)}
+{chr(10).join(f"• {sector}" for sector in analysis.recommended_sectors)}
 
 **Analysis:**
 {analysis.analysis}
 
 **Key Points:**
-{chr(10).join(f'• {point}' for point in analysis.key_points)}
+{chr(10).join(f"• {point}" for point in analysis.key_points)}
 """
 
             response = AIMessage(content=response_text)
@@ -158,9 +154,7 @@ Note: Use general market knowledge. This is for strategy generation purposes.
             }
 
 
-async def market_analyst_node(
-    state: ConversationState, *, llm_service: LLMService
-) -> ConversationState:
+async def market_analyst_node(state: ConversationState, *, llm_service: LLMService) -> ConversationState:
     """
     LangGraph node function for market analysis.
 

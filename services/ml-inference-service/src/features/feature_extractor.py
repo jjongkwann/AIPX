@@ -1,9 +1,11 @@
 """Feature extraction for ML models."""
+
+import logging
+from typing import Dict, Optional
+
 import numpy as np
 import pandas as pd
-from typing import Optional, Dict, Any
-from sklearn.preprocessing import StandardScaler, MinMaxScaler
-import logging
+from sklearn.preprocessing import MinMaxScaler, StandardScaler
 
 from ..config import settings
 
@@ -28,11 +30,7 @@ class FeatureExtractor:
         elif normalization == "minmax":
             self.scaler = MinMaxScaler()
 
-    def extract_price_features(
-        self,
-        df: pd.DataFrame,
-        window_size: int = 60
-    ) -> np.ndarray:
+    def extract_price_features(self, df: pd.DataFrame, window_size: int = 60) -> np.ndarray:
         """
         Extract features for LSTM price prediction.
 
@@ -45,7 +43,7 @@ class FeatureExtractor:
         """
         try:
             # Validate input
-            required_columns = ['open', 'high', 'low', 'close', 'volume']
+            required_columns = ["open", "high", "low", "close", "volume"]
             if not all(col in df.columns for col in required_columns):
                 raise ValueError(f"DataFrame must contain columns: {required_columns}")
 
@@ -56,11 +54,11 @@ class FeatureExtractor:
             window_df = df.tail(window_size).copy()
 
             # Extract base prices
-            close_prices = window_df['close'].values
-            open_prices = window_df['open'].values
-            high_prices = window_df['high'].values
-            low_prices = window_df['low'].values
-            volumes = window_df['volume'].values
+            close_prices = window_df["close"].values
+            open_prices = window_df["open"].values
+            high_prices = window_df["high"].values
+            low_prices = window_df["low"].values
+            volumes = window_df["volume"].values
 
             # Calculate price ratios (relative to close)
             open_close_ratio = open_prices / close_prices
@@ -74,13 +72,9 @@ class FeatureExtractor:
             volume_normalized = (volumes - volumes.mean()) / (volumes.std() + 1e-8)
 
             # Stack features
-            features = np.column_stack([
-                close_normalized,
-                open_close_ratio,
-                high_close_ratio,
-                low_close_ratio,
-                volume_normalized
-            ])
+            features = np.column_stack(
+                [close_normalized, open_close_ratio, high_close_ratio, low_close_ratio, volume_normalized]
+            )
 
             return features.astype(np.float32)
 
@@ -88,11 +82,7 @@ class FeatureExtractor:
             logger.error(f"Feature extraction error: {e}")
             raise
 
-    def extract_technical_indicators(
-        self,
-        df: pd.DataFrame,
-        window_size: int = 60
-    ) -> np.ndarray:
+    def extract_technical_indicators(self, df: pd.DataFrame, window_size: int = 60) -> np.ndarray:
         """
         Extract technical indicators as additional features.
 
@@ -109,18 +99,18 @@ class FeatureExtractor:
             indicators = []
 
             # Returns
-            returns = window_df['close'].pct_change().fillna(0).values
+            returns = window_df["close"].pct_change().fillna(0).values
             indicators.append(returns)
 
             # Moving averages (if enough data)
             if len(df) >= window_size + 20:
-                ma_5 = window_df['close'].rolling(5).mean().fillna(method='bfill').values
-                ma_20 = window_df['close'].rolling(20).mean().fillna(method='bfill').values
+                ma_5 = window_df["close"].rolling(5).mean().fillna(method="bfill").values
+                ma_20 = window_df["close"].rolling(20).mean().fillna(method="bfill").values
                 ma_ratio = ma_5 / (ma_20 + 1e-8)
                 indicators.append(ma_ratio)
 
             # RSI (Relative Strength Index)
-            delta = window_df['close'].diff()
+            delta = window_df["close"].diff()
             gain = (delta.where(delta > 0, 0)).rolling(14).mean()
             loss = (-delta.where(delta < 0, 0)).rolling(14).mean()
             rs = gain / (loss + 1e-8)
@@ -128,12 +118,12 @@ class FeatureExtractor:
             indicators.append(rsi.fillna(50).values / 100.0)  # Normalize to [0, 1]
 
             # Volume ratio
-            volume_ma = window_df['volume'].rolling(20).mean().fillna(method='bfill')
-            volume_ratio = window_df['volume'] / (volume_ma + 1e-8)
+            volume_ma = window_df["volume"].rolling(20).mean().fillna(method="bfill")
+            volume_ratio = window_df["volume"] / (volume_ma + 1e-8)
             indicators.append(volume_ratio.values)
 
             # Volatility (standard deviation of returns)
-            volatility = window_df['close'].pct_change().rolling(20).std().fillna(0).values
+            volatility = window_df["close"].pct_change().rolling(20).std().fillna(0).values
             indicators.append(volatility)
 
             # Stack indicators
@@ -145,11 +135,7 @@ class FeatureExtractor:
             logger.error(f"Technical indicator extraction error: {e}")
             raise
 
-    def extract_advanced_features(
-        self,
-        df: pd.DataFrame,
-        window_size: int = 60
-    ) -> np.ndarray:
+    def extract_advanced_features(self, df: pd.DataFrame, window_size: int = 60) -> np.ndarray:
         """
         Extract advanced features combining price and technical indicators.
 
@@ -200,11 +186,7 @@ class FeatureExtractor:
             logger.error(f"Normalization error: {e}")
             raise
 
-    def prepare_lstm_input(
-        self,
-        df: pd.DataFrame,
-        window_size: Optional[int] = None
-    ) -> np.ndarray:
+    def prepare_lstm_input(self, df: pd.DataFrame, window_size: Optional[int] = None) -> np.ndarray:
         """
         Prepare input features for LSTM model.
 
@@ -226,11 +208,7 @@ class FeatureExtractor:
 
         return features
 
-    def prepare_batch_lstm_input(
-        self,
-        dfs: list[pd.DataFrame],
-        window_size: Optional[int] = None
-    ) -> np.ndarray:
+    def prepare_batch_lstm_input(self, dfs: list[pd.DataFrame], window_size: Optional[int] = None) -> np.ndarray:
         """
         Prepare batch input for LSTM model.
 
@@ -250,11 +228,7 @@ class FeatureExtractor:
 
         return np.stack(batch_features, axis=0)
 
-    def calculate_feature_importance(
-        self,
-        features: np.ndarray,
-        predictions: np.ndarray
-    ) -> Dict[str, float]:
+    def calculate_feature_importance(self, features: np.ndarray, predictions: np.ndarray) -> Dict[str, float]:
         """
         Calculate feature importance scores.
 
@@ -268,11 +242,11 @@ class FeatureExtractor:
         try:
             # Simple correlation-based importance
             feature_names = [
-                'close_normalized',
-                'open_close_ratio',
-                'high_close_ratio',
-                'low_close_ratio',
-                'volume_normalized'
+                "close_normalized",
+                "open_close_ratio",
+                "high_close_ratio",
+                "low_close_ratio",
+                "volume_normalized",
             ]
 
             importance = {}
@@ -308,16 +282,13 @@ class SentimentFeatureExtractor:
         """
         try:
             from transformers import AutoTokenizer
+
             self.tokenizer = AutoTokenizer.from_pretrained(tokenizer_name)
         except Exception as e:
             logger.warning(f"Failed to load tokenizer: {e}. Using dummy tokenizer.")
             self.tokenizer = None
 
-    def tokenize_text(
-        self,
-        text: str,
-        max_length: int = 512
-    ) -> Dict[str, np.ndarray]:
+    def tokenize_text(self, text: str, max_length: int = 512) -> Dict[str, np.ndarray]:
         """
         Tokenize text for transformer model.
 
@@ -332,35 +303,24 @@ class SentimentFeatureExtractor:
             # Dummy tokenization for testing
             input_ids = np.zeros(max_length, dtype=np.int64)
             attention_mask = np.ones(max_length, dtype=np.int64)
-            return {
-                "input_ids": input_ids,
-                "attention_mask": attention_mask
-            }
+            return {"input_ids": input_ids, "attention_mask": attention_mask}
 
         try:
             # Tokenize
             encoded = self.tokenizer(
-                text,
-                max_length=max_length,
-                padding='max_length',
-                truncation=True,
-                return_tensors='np'
+                text, max_length=max_length, padding="max_length", truncation=True, return_tensors="np"
             )
 
             return {
-                "input_ids": encoded['input_ids'][0].astype(np.int64),
-                "attention_mask": encoded['attention_mask'][0].astype(np.int64)
+                "input_ids": encoded["input_ids"][0].astype(np.int64),
+                "attention_mask": encoded["attention_mask"][0].astype(np.int64),
             }
 
         except Exception as e:
             logger.error(f"Tokenization error: {e}")
             raise
 
-    def batch_tokenize(
-        self,
-        texts: list[str],
-        max_length: int = 512
-    ) -> Dict[str, np.ndarray]:
+    def batch_tokenize(self, texts: list[str], max_length: int = 512) -> Dict[str, np.ndarray]:
         """
         Batch tokenize multiple texts.
 
@@ -374,14 +334,14 @@ class SentimentFeatureExtractor:
         if not texts:
             return {
                 "input_ids": np.zeros((0, max_length), dtype=np.int64),
-                "attention_mask": np.zeros((0, max_length), dtype=np.int64)
+                "attention_mask": np.zeros((0, max_length), dtype=np.int64),
             }
 
         batch_tokens = [self.tokenize_text(text, max_length) for text in texts]
 
         return {
             "input_ids": np.stack([t["input_ids"] for t in batch_tokens]),
-            "attention_mask": np.stack([t["attention_mask"] for t in batch_tokens])
+            "attention_mask": np.stack([t["attention_mask"] for t in batch_tokens]),
         }
 
 

@@ -2,11 +2,10 @@
 
 from decimal import Decimal
 from unittest.mock import AsyncMock, MagicMock
-from uuid import uuid4
 
 import pytest
 
-from src.risk import RiskManager, RiskCheckResult
+from src.risk import RiskManager
 
 
 @pytest.mark.unit

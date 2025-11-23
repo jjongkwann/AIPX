@@ -1,7 +1,8 @@
 """Triton Inference Server client wrapper."""
-import asyncio
+
 import logging
-from typing import Optional, Dict, Any, List
+from typing import Any, Dict, List, Optional
+
 import numpy as np
 import tritonclient.grpc as grpcclient
 import tritonclient.grpc.aio as aiogrpcclient
@@ -29,10 +30,7 @@ class TritonClient:
     async def connect(self):
         """Establish connection to Triton server."""
         try:
-            self.client = aiogrpcclient.InferenceServerClient(
-                url=self.url,
-                verbose=False
-            )
+            self.client = aiogrpcclient.InferenceServerClient(url=self.url, verbose=False)
 
             # Check server health
             await self.client.is_server_live()
@@ -65,11 +63,7 @@ class TritonClient:
         except Exception:
             return False
 
-    async def predict_price(
-        self,
-        features: np.ndarray,
-        model_version: Optional[str] = None
-    ) -> Dict[str, Any]:
+    async def predict_price(self, features: np.ndarray, model_version: Optional[str] = None) -> Dict[str, Any]:
         """
         Predict next tick price using LSTM model.
 
@@ -90,11 +84,7 @@ class TritonClient:
 
             # Prepare input tensor
             features = features.astype(np.float32)
-            input_tensor = grpcclient.InferInput(
-                "input__0",
-                features.shape,
-                "FP32"
-            )
+            input_tensor = grpcclient.InferInput("input__0", features.shape, "FP32")
             input_tensor.set_data_from_numpy(features)
 
             # Prepare output
@@ -103,10 +93,7 @@ class TritonClient:
             # Execute inference
             model_name = "lstm_price_predictor"
             response = await self.client.infer(
-                model_name=model_name,
-                inputs=[input_tensor],
-                outputs=[output_tensor],
-                model_version=model_version or ""
+                model_name=model_name, inputs=[input_tensor], outputs=[output_tensor], model_version=model_version or ""
             )
 
             # Extract prediction
@@ -120,7 +107,8 @@ class TritonClient:
                 "model_name": model_name,
                 "model_version": model_version or "latest",
                 "inference_time_ms": stats.model_stats[0].inference_stats.success.ns / 1e6
-                if stats.model_stats else None
+                if stats.model_stats
+                else None,
             }
 
         except InferenceServerException as e:
@@ -131,10 +119,7 @@ class TritonClient:
             raise
 
     async def analyze_sentiment(
-        self,
-        input_ids: np.ndarray,
-        attention_mask: np.ndarray,
-        model_version: Optional[str] = None
+        self, input_ids: np.ndarray, attention_mask: np.ndarray, model_version: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Analyze news sentiment using transformer model.
@@ -177,7 +162,7 @@ class TritonClient:
                 model_name=model_name,
                 inputs=[input_ids_tensor, attention_mask_tensor],
                 outputs=[sentiment_output, confidence_output],
-                model_version=model_version or ""
+                model_version=model_version or "",
             )
 
             # Extract results
@@ -188,7 +173,7 @@ class TritonClient:
                 "sentiment": float(sentiment),
                 "confidence": float(confidence),
                 "model_name": model_name,
-                "model_version": model_version or "latest"
+                "model_version": model_version or "latest",
             }
 
         except InferenceServerException as e:
@@ -203,7 +188,7 @@ class TritonClient:
         price_features: np.ndarray,
         news_text_ids: np.ndarray,
         attention_mask: np.ndarray,
-        model_version: Optional[str] = None
+        model_version: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
         Combined prediction using ensemble model.
@@ -247,7 +232,7 @@ class TritonClient:
                 model_name=model_name,
                 inputs=[price_input, text_input, mask_input],
                 outputs=[final_pred, price_comp, sentiment_comp, confidence],
-                model_version=model_version or ""
+                model_version=model_version or "",
             )
 
             return {
@@ -256,7 +241,7 @@ class TritonClient:
                 "sentiment_component": float(response.as_numpy("sentiment_component")[0]),
                 "confidence": float(response.as_numpy("confidence")[0]),
                 "model_name": model_name,
-                "model_version": model_version or "latest"
+                "model_version": model_version or "latest",
             }
 
         except InferenceServerException as e:
@@ -267,9 +252,7 @@ class TritonClient:
             raise
 
     async def batch_predict_prices(
-        self,
-        features_batch: List[np.ndarray],
-        model_version: Optional[str] = None
+        self, features_batch: List[np.ndarray], model_version: Optional[str] = None
     ) -> List[Dict[str, Any]]:
         """
         Batch price prediction for multiple samples.
@@ -300,18 +283,14 @@ class TritonClient:
                 model_name="lstm_price_predictor",
                 inputs=[input_tensor],
                 outputs=[output_tensor],
-                model_version=model_version or ""
+                model_version=model_version or "",
             )
 
             # Extract predictions
             predictions = response.as_numpy("output__0")
 
             return [
-                {
-                    "predicted_price": float(pred[0]),
-                    "batch_index": i,
-                    "model_version": model_version or "latest"
-                }
+                {"predicted_price": float(pred[0]), "batch_index": i, "model_version": model_version or "latest"}
                 for i, pred in enumerate(predictions)
             ]
 
@@ -333,22 +312,12 @@ class TritonClient:
                 "versions": metadata.versions,
                 "platform": metadata.platform,
                 "inputs": [
-                    {
-                        "name": inp.name,
-                        "datatype": inp.datatype,
-                        "shape": list(inp.shape)
-                    }
-                    for inp in metadata.inputs
+                    {"name": inp.name, "datatype": inp.datatype, "shape": list(inp.shape)} for inp in metadata.inputs
                 ],
                 "outputs": [
-                    {
-                        "name": out.name,
-                        "datatype": out.datatype,
-                        "shape": list(out.shape)
-                    }
-                    for out in metadata.outputs
+                    {"name": out.name, "datatype": out.datatype, "shape": list(out.shape)} for out in metadata.outputs
                 ],
-                "max_batch_size": config.config.max_batch_size
+                "max_batch_size": config.config.max_batch_size,
             }
 
         except Exception as e:
@@ -373,7 +342,7 @@ class TritonClient:
                     "count": success_stats.count,
                     "total_time_ns": success_stats.ns,
                     "avg_time_ms": success_stats.ns / success_stats.count / 1e6 if success_stats.count > 0 else 0,
-                    "version": model_stat.version
+                    "version": model_stat.version,
                 }
 
             return metrics

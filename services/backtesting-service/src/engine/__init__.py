@@ -1,7 +1,7 @@
 """Backtesting engine components"""
 
-from .event_loop import EventLoop, Event, EventType
-from .matching_engine import MatchingEngine, Order, OrderType, OrderSide
+from .event_loop import Event, EventLoop, EventType
+from .matching_engine import MatchingEngine, Order, OrderSide, OrderType
 from .portfolio import PortfolioManager, Position, Trade
 
 __all__ = [

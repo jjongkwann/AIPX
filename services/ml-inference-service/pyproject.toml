@@ -96,9 +96,14 @@ line-length = 100
 target-version = ["py311"]
 
 [tool.ruff]
-line-length = 100
-select = ["E", "F", "W", "I", "N", "UP", "B"]
-ignore = ["E501"]
+line-length = 120
+
+[tool.ruff.format]
+quote-style = "double"
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I"]
+ignore = ["E722", "W605", "E721", "E731"]
 
 [tool.mypy]
 python_version = "3.11"

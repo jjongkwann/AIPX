@@ -2,9 +2,10 @@
 Structured logging configuration
 """
 
-import sys
 import logging
+import sys
 from typing import Optional
+
 import structlog
 from structlog.stdlib import LoggerFactory
 

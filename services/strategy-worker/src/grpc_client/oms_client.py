@@ -227,9 +227,7 @@ class OMSClient:
         #     )
         #     raise
 
-    async def stream_orders(
-        self, orders: AsyncGenerator[OrderRequest, None]
-    ) -> AsyncGenerator[OrderResponse, None]:
+    async def stream_orders(self, orders: AsyncGenerator[OrderRequest, None]) -> AsyncGenerator[OrderResponse, None]:
         """Stream orders to OMS and receive responses.
 
         Args:

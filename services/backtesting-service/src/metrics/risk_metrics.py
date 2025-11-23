@@ -1,18 +1,15 @@
 """Risk metrics calculation"""
 
+from typing import Dict, List, Optional
+
 import numpy as np
-import pandas as pd
-from typing import List, Dict, Optional
 
 
 class RiskMetrics:
     """Calculate risk metrics for backtesting results"""
 
     @staticmethod
-    def calculate_var(
-        equity_curve: List[Dict],
-        confidence_level: float = 0.95
-    ) -> float:
+    def calculate_var(equity_curve: List[Dict], confidence_level: float = 0.95) -> float:
         """
         Calculate Value at Risk (VaR)
 
@@ -26,7 +23,7 @@ class RiskMetrics:
         if not equity_curve or len(equity_curve) < 2:
             return 0.0
 
-        equity_values = np.array([point['equity'] for point in equity_curve])
+        equity_values = np.array([point["equity"] for point in equity_curve])
         returns = np.diff(equity_values) / equity_values[:-1]
 
         if len(returns) == 0:
@@ -37,10 +34,7 @@ class RiskMetrics:
         return float(var * 100)  # Return as percentage
 
     @staticmethod
-    def calculate_cvar(
-        equity_curve: List[Dict],
-        confidence_level: float = 0.95
-    ) -> float:
+    def calculate_cvar(equity_curve: List[Dict], confidence_level: float = 0.95) -> float:
         """
         Calculate Conditional Value at Risk (CVaR) / Expected Shortfall
 
@@ -54,7 +48,7 @@ class RiskMetrics:
         if not equity_curve or len(equity_curve) < 2:
             return 0.0
 
-        equity_values = np.array([point['equity'] for point in equity_curve])
+        equity_values = np.array([point["equity"] for point in equity_curve])
         returns = np.diff(equity_values) / equity_values[:-1]
 
         if len(returns) == 0:
@@ -73,10 +67,7 @@ class RiskMetrics:
         return float(cvar * 100)  # Return as percentage
 
     @staticmethod
-    def calculate_beta(
-        equity_curve: List[Dict],
-        market_returns: Optional[np.ndarray] = None
-    ) -> float:
+    def calculate_beta(equity_curve: List[Dict], market_returns: Optional[np.ndarray] = None) -> float:
         """
         Calculate Beta (systematic risk)
 
@@ -93,7 +84,7 @@ class RiskMetrics:
         if market_returns is None:
             return 1.0  # Default beta if no market data
 
-        equity_values = np.array([point['equity'] for point in equity_curve])
+        equity_values = np.array([point["equity"] for point in equity_curve])
         portfolio_returns = np.diff(equity_values) / equity_values[:-1]
 
         # Ensure arrays have same length
@@ -115,10 +106,7 @@ class RiskMetrics:
         return float(beta)
 
     @staticmethod
-    def calculate_volatility(
-        equity_curve: List[Dict],
-        periods_per_year: int = 252
-    ) -> float:
+    def calculate_volatility(equity_curve: List[Dict], periods_per_year: int = 252) -> float:
         """
         Calculate annualized volatility (standard deviation)
 
@@ -132,7 +120,7 @@ class RiskMetrics:
         if not equity_curve or len(equity_curve) < 2:
             return 0.0
 
-        equity_values = np.array([point['equity'] for point in equity_curve])
+        equity_values = np.array([point["equity"] for point in equity_curve])
         returns = np.diff(equity_values) / equity_values[:-1]
 
         if len(returns) == 0:
@@ -142,10 +130,7 @@ class RiskMetrics:
         return float(volatility * 100)  # Return as percentage
 
     @staticmethod
-    def calculate_calmar_ratio(
-        equity_curve: List[Dict],
-        years: Optional[float] = None
-    ) -> float:
+    def calculate_calmar_ratio(equity_curve: List[Dict], years: Optional[float] = None) -> float:
         """
         Calculate Calmar Ratio (CAGR / abs(MDD))
 
@@ -166,23 +151,22 @@ class RiskMetrics:
         mdd = PerformanceMetrics.calculate_mdd(equity_curve)
 
         if mdd == 0:
-            return float('inf') if cagr > 0 else 0.0
+            return float("inf") if cagr > 0 else 0.0
 
         calmar = cagr / abs(mdd)
         return float(calmar)
 
     @staticmethod
     def calculate_all_metrics(
-        equity_curve: List[Dict],
-        market_returns: Optional[np.ndarray] = None
+        equity_curve: List[Dict], market_returns: Optional[np.ndarray] = None
     ) -> Dict[str, float]:
         """Calculate all risk metrics at once"""
         return {
-            'var_95': RiskMetrics.calculate_var(equity_curve, 0.95),
-            'var_99': RiskMetrics.calculate_var(equity_curve, 0.99),
-            'cvar_95': RiskMetrics.calculate_cvar(equity_curve, 0.95),
-            'cvar_99': RiskMetrics.calculate_cvar(equity_curve, 0.99),
-            'beta': RiskMetrics.calculate_beta(equity_curve, market_returns),
-            'volatility': RiskMetrics.calculate_volatility(equity_curve),
-            'calmar_ratio': RiskMetrics.calculate_calmar_ratio(equity_curve),
+            "var_95": RiskMetrics.calculate_var(equity_curve, 0.95),
+            "var_99": RiskMetrics.calculate_var(equity_curve, 0.99),
+            "cvar_95": RiskMetrics.calculate_cvar(equity_curve, 0.95),
+            "cvar_99": RiskMetrics.calculate_cvar(equity_curve, 0.99),
+            "beta": RiskMetrics.calculate_beta(equity_curve, market_returns),
+            "volatility": RiskMetrics.calculate_volatility(equity_curve),
+            "calmar_ratio": RiskMetrics.calculate_calmar_ratio(equity_curve),
         }

@@ -1,8 +1,8 @@
 """Unit tests for Risk Metrics"""
 
-import pytest
-import numpy as np
 from datetime import datetime, timedelta
+
+import numpy as np
 from src.metrics.risk_metrics import RiskMetrics
 
 
@@ -33,9 +33,7 @@ class TestRiskMetrics:
 
     def test_calculate_var_single_point(self):
         """Test VaR with single data point"""
-        equity_curve = [
-            {'timestamp': datetime(2024, 1, 1), 'equity': 10000000}
-        ]
+        equity_curve = [{"timestamp": datetime(2024, 1, 1), "equity": 10000000}]
 
         var = RiskMetrics.calculate_var(equity_curve)
 
@@ -99,10 +97,7 @@ class TestRiskMetrics:
         """Test volatility with constant equity"""
         equity_curve = []
         for i in range(100):
-            equity_curve.append({
-                'timestamp': datetime(2024, 1, 1) + timedelta(days=i),
-                'equity': 10000000
-            })
+            equity_curve.append({"timestamp": datetime(2024, 1, 1) + timedelta(days=i), "equity": 10000000})
 
         volatility = RiskMetrics.calculate_volatility(equity_curve)
 
@@ -125,24 +120,28 @@ class TestRiskMetrics:
         """Test Calmar ratio with no drawdown"""
         equity_curve = []
         for i in range(100):
-            equity_curve.append({
-                'timestamp': datetime(2024, 1, 1) + timedelta(days=i),
-                'equity': 10000000 * (1 + i * 0.01)  # Continuous growth
-            })
+            equity_curve.append(
+                {
+                    "timestamp": datetime(2024, 1, 1) + timedelta(days=i),
+                    "equity": 10000000 * (1 + i * 0.01),  # Continuous growth
+                }
+            )
 
         calmar = RiskMetrics.calculate_calmar_ratio(equity_curve)
 
         # Should be infinite (no drawdown)
-        assert calmar == float('inf')
+        assert calmar == float("inf")
 
     def test_calculate_calmar_ratio_negative_cagr(self):
         """Test Calmar ratio with negative returns"""
         equity_curve = []
         for i in range(100):
-            equity_curve.append({
-                'timestamp': datetime(2024, 1, 1) + timedelta(days=i),
-                'equity': 10000000 * (1 - i * 0.001)  # Declining
-            })
+            equity_curve.append(
+                {
+                    "timestamp": datetime(2024, 1, 1) + timedelta(days=i),
+                    "equity": 10000000 * (1 - i * 0.001),  # Declining
+                }
+            )
 
         calmar = RiskMetrics.calculate_calmar_ratio(equity_curve)
 
@@ -160,13 +159,13 @@ class TestRiskMetrics:
         metrics = RiskMetrics.calculate_all_metrics(sample_equity_curve)
 
         # Check all metrics are present
-        assert 'var_95' in metrics
-        assert 'var_99' in metrics
-        assert 'cvar_95' in metrics
-        assert 'cvar_99' in metrics
-        assert 'beta' in metrics
-        assert 'volatility' in metrics
-        assert 'calmar_ratio' in metrics
+        assert "var_95" in metrics
+        assert "var_99" in metrics
+        assert "cvar_95" in metrics
+        assert "cvar_99" in metrics
+        assert "beta" in metrics
+        assert "volatility" in metrics
+        assert "calmar_ratio" in metrics
 
         # Check all are numeric
         for key, value in metrics.items():
@@ -177,13 +176,10 @@ class TestRiskMetrics:
         np.random.seed(42)
         market_returns = np.random.randn(len(sample_equity_curve) - 1) * 0.01
 
-        metrics = RiskMetrics.calculate_all_metrics(
-            sample_equity_curve,
-            market_returns
-        )
+        metrics = RiskMetrics.calculate_all_metrics(sample_equity_curve, market_returns)
 
         # Beta should be calculated with market data
-        assert metrics['beta'] != 1.0
+        assert metrics["beta"] != 1.0
 
     def test_var_cvar_relationship(self, sample_equity_curve):
         """Test that CVaR is more extreme than VaR"""
@@ -196,16 +192,10 @@ class TestRiskMetrics:
     def test_volatility_scaling(self, sample_equity_curve):
         """Test volatility scales correctly with period"""
         # Daily volatility
-        daily_vol = RiskMetrics.calculate_volatility(
-            sample_equity_curve,
-            periods_per_year=252
-        )
+        daily_vol = RiskMetrics.calculate_volatility(sample_equity_curve, periods_per_year=252)
 
         # Weekly volatility (52 weeks)
-        weekly_vol = RiskMetrics.calculate_volatility(
-            sample_equity_curve,
-            periods_per_year=52
-        )
+        weekly_vol = RiskMetrics.calculate_volatility(sample_equity_curve, periods_per_year=52)
 
         # Should be different due to scaling
         assert daily_vol != weekly_vol
@@ -220,10 +210,7 @@ class TestRiskMetrics:
 
         equity_curve = []
         for i in range(100):
-            equity_curve.append({
-                'timestamp': datetime(2024, 1, 1) + timedelta(days=i),
-                'equity': equity_values[i]
-            })
+            equity_curve.append({"timestamp": datetime(2024, 1, 1) + timedelta(days=i), "equity": equity_values[i]})
 
         # Use same returns as market
         market_returns = returns[1:]  # Skip first to match diff
@@ -250,10 +237,7 @@ class TestRiskMetrics:
 
         equity_curve = []
         for i, equity in enumerate(equity_values):
-            equity_curve.append({
-                'timestamp': datetime(2024, 1, 1) + timedelta(days=i),
-                'equity': equity
-            })
+            equity_curve.append({"timestamp": datetime(2024, 1, 1) + timedelta(days=i), "equity": equity})
 
         # Now equity_curve has 100 points, portfolio returns (from diff) will be 99
         beta = RiskMetrics.calculate_beta(equity_curve, market_returns)
@@ -263,12 +247,9 @@ class TestRiskMetrics:
 
     def test_volatility_with_known_data(self, known_returns_data):
         """Test volatility matches expected value with known data"""
-        volatility = RiskMetrics.calculate_volatility(
-            known_returns_data['equity_curve'],
-            periods_per_year=252
-        )
+        volatility = RiskMetrics.calculate_volatility(known_returns_data["equity_curve"], periods_per_year=252)
 
-        expected_vol = known_returns_data['expected_annual_volatility'] * 100
+        expected_vol = known_returns_data["expected_annual_volatility"] * 100
 
         # Should be close (within reasonable tolerance due to sampling)
         assert abs(volatility - expected_vol) < 5.0

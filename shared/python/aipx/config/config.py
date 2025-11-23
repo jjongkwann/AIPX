@@ -22,7 +22,9 @@ class Settings(BaseSettings):
     # Kafka
     kafka_brokers: str = Field(default="localhost:9092", alias="KAFKA_BROKERS")
     kafka_topic_market_data: str = Field(default="market-data-raw", alias="KAFKA_TOPIC_MARKET_DATA")
-    kafka_topic_trading_signals: str = Field(default="trading-signals", alias="KAFKA_TOPIC_TRADING_SIGNALS")
+    kafka_topic_trading_signals: str = Field(
+        default="trading-signals", alias="KAFKA_TOPIC_TRADING_SIGNALS"
+    )
     kafka_topic_order_events: str = Field(default="order-events", alias="KAFKA_TOPIC_ORDER_EVENTS")
     kafka_topic_executions: str = Field(default="executions", alias="KAFKA_TOPIC_EXECUTIONS")
     kafka_consumer_group: str = Field(default="aipx-consumer-group", alias="KAFKA_CONSUMER_GROUP")

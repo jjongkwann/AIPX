@@ -1,15 +1,15 @@
 """Kafka consumer implementation for AIPX."""
 
+import asyncio
 import json
 import logging
-from typing import Any, Callable, Dict, Optional, List
-import asyncio
+from typing import Any, Callable, Dict, List, Optional
 
 from kafka import KafkaConsumer as ApacheKafkaConsumer
 from kafka.errors import KafkaError as ApacheKafkaError
 
 from .config import KafkaConfig
-from .exceptions import KafkaConsumerError, KafkaConnectionError, KafkaSerializationError
+from .exceptions import KafkaConnectionError, KafkaConsumerError, KafkaSerializationError
 
 logger = logging.getLogger(__name__)
 
@@ -63,9 +63,7 @@ class KafkaConsumer:
             consumer_config = self._config.get_consumer_config(self._group_id)
             # Override deserializers for JSON
             consumer_config["value_deserializer"] = lambda v: json.loads(v.decode("utf-8"))
-            consumer_config["key_deserializer"] = (
-                lambda k: k.decode("utf-8") if k else None
-            )
+            consumer_config["key_deserializer"] = lambda k: k.decode("utf-8") if k else None
 
             self._consumer = ApacheKafkaConsumer(**consumer_config)
             logger.info(
@@ -213,9 +211,7 @@ class KafkaConsumer:
                 extra={"error": str(e)},
                 exc_info=True,
             )
-            raise KafkaConsumerError(
-                f"Consumer error: {str(e)}", original_error=e
-            ) from e
+            raise KafkaConsumerError(f"Consumer error: {str(e)}", original_error=e) from e
 
     def stop(self) -> None:
         """Stop consuming messages."""
